@@ -1,163 +1,157 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Eye, Lock, Mail } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { UserRole } from "@/types";
-import { getRedirectPathForRole } from "@/lib/auth/roles";
 
-const schema = z.object({
-  email: z.string().email("Podaj poprawny adres email."),
-  password: z.string().min(8, "Hasło musi mieć minimum 8 znaków.")
-});
-
-type FormValues = z.infer<typeof schema>;
-
-type ProfileRoleResponse = {
-  role: UserRole;
+const ERROR_MESSAGES: Record<string, string> = {
+  missing_profile:
+    "Twój profil nie został jeszcze skonfigurowany. Skontaktuj się z administratorem.",
+  invalid_credentials: "Nieprawidłowy email lub hasło.",
+  no_role:
+    "Twoje konto nie ma przypisanej roli. Skontaktuj się z administratorem.",
+  default: "Wystąpił błąd logowania. Spróbuj ponownie.",
 };
 
-export function LoginForm() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [serverMessage, setServerMessage] = useState("");
-  const supabase = createClient();
+export default function LoginForm({
+  searchError,
+}: {
+  searchError?: string;
+}) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(
+    searchError ? (ERROR_MESSAGES[searchError] ?? ERROR_MESSAGES.default) : null
+  );
+
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const supabase = createClient();
 
-  const fallbackMessage = useMemo(() => {
-    const errorCode = searchParams.get("error");
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-    if (errorCode === "missing_profile") {
-      return "Nie znaleziono profilu użytkownika w systemie. Skontaktuj się z administratorem.";
-    }
-
-    if (errorCode === "unknown_role") {
-      return "Nie udało się ustalić roli użytkownika. Skontaktuj się z administratorem.";
-    }
-
-    return "";
-  }, [searchParams]);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting }
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { email: "", password: "" }
-  });
-
-  const onSubmit = async (values: FormValues) => {
-    setServerMessage("");
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: values.email,
-      password: values.password
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
 
-    if (signInError) {
-      setServerMessage(signInError.message || "Nie udało się zalogować.");
+    if (authError) {
+      setError(ERROR_MESSAGES.invalid_credentials);
+      setLoading(false);
       return;
     }
 
+    // Pobierz profil po zalogowaniu
     const {
       data: { user },
-      error: userError
     } = await supabase.auth.getUser();
 
-    if (userError || !user) {
-      setServerMessage(userError?.message || "Nie udało się pobrać danych użytkownika.");
+    if (!user) {
+      setError(ERROR_MESSAGES.default);
+      setLoading(false);
       return;
     }
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("role")
+      .select("id, role")
       .eq("id", user.id)
-      .maybeSingle();
+      .single();
 
-    if (profileError) {
-      setServerMessage(`Błąd profilu: ${profileError.message}`);
+    if (profileError || !profile) {
+      setError(ERROR_MESSAGES.missing_profile);
+      setLoading(false);
       return;
     }
 
-    if (!profile) {
-      await supabase.auth.signOut();
-      router.replace("/logowanie?error=missing_profile");
-      router.refresh();
+    if (!profile.role) {
+      setError(ERROR_MESSAGES.no_role);
+      setLoading(false);
       return;
     }
 
-    const typedProfile = profile as ProfileRoleResponse;
-
-    if (typedProfile.role !== "admin" && typedProfile.role !== "tenant") {
-      await supabase.auth.signOut();
-      router.replace("/logowanie?error=unknown_role");
-      router.refresh();
-      return;
+    if (profile.role === "admin") {
+      router.push("/admin/dashboard");
+    } else if (profile.role === "tenant") {
+      router.push("/najemca/dashboard");
+    } else {
+      setError(ERROR_MESSAGES.no_role);
+      setLoading(false);
     }
-
-    router.replace(getRedirectPathForRole(typedProfile.role));
-    router.refresh();
-  };
-
-  const visibleMessage = serverMessage || fallbackMessage;
+  }
 
   return (
-    <form className="form-grid" onSubmit={handleSubmit(onSubmit)}>
-      <div className="field">
-        <label className="label">Email</label>
-        <Input
-          icon={<Mail size={18} color="#7d8596" />}
-          placeholder="twoj@email.pl"
-          error={errors.email?.message}
-          {...register("email")}
-        />
-      </div>
-
-      <div className="field">
-        <div className="label-row">
-          <label className="label">Hasło</label>
-          <Link href="/reset-hasla" className="helper-link">
-            Przypomnij hasło
-          </Link>
+    <form onSubmit={handleSubmit} style={{ width: "100%" }}>
+      {error && (
+        <div
+          style={{
+            background: "var(--color-background-danger)",
+            color: "var(--color-text-danger)",
+            border: "0.5px solid var(--color-border-danger)",
+            borderRadius: "var(--border-radius-md)",
+            padding: "12px 16px",
+            marginBottom: "16px",
+            fontSize: "14px",
+          }}
+        >
+          {error}
         </div>
-        <Input
-          icon={<Lock size={18} color="#7d8596" />}
-          rightSlot={
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              style={{
-                border: 0,
-                background: "transparent",
-                display: "grid",
-                placeItems: "center",
-                cursor: "pointer"
-              }}
-            >
-              <Eye size={18} color="#7d8596" />
-            </button>
-          }
-          type={showPassword ? "text" : "password"}
-          placeholder="••••••••"
-          error={errors.password?.message}
-          {...register("password")}
+      )}
+
+      <div style={{ marginBottom: "16px" }}>
+        <label
+          htmlFor="email"
+          style={{
+            display: "block",
+            fontSize: "14px",
+            marginBottom: "6px",
+            color: "var(--color-text-secondary)",
+          }}
+        >
+          Email
+        </label>
+        <input
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="twoj@email.pl"
+          required
+          disabled={loading}
+          style={{ width: "100%" }}
         />
       </div>
 
-      {visibleMessage ? <div className="error">{visibleMessage}</div> : null}
+      <div style={{ marginBottom: "24px" }}>
+        <label
+          htmlFor="password"
+          style={{
+            display: "block",
+            fontSize: "14px",
+            marginBottom: "6px",
+            color: "var(--color-text-secondary)",
+          }}
+        >
+          Hasło
+        </label>
+        <input
+          id="password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="••••••••"
+          required
+          disabled={loading}
+          style={{ width: "100%" }}
+        />
+      </div>
 
-      <Button type="submit" disabled={isSubmitting}>
-        Zaloguj się <ArrowRight size={18} />
-      </Button>
+      <button type="submit" disabled={loading} style={{ width: "100%" }}>
+        {loading ? "Logowanie..." : "Zaloguj się →"}
+      </button>
     </form>
   );
 }
