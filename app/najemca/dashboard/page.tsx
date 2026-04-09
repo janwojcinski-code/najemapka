@@ -1,78 +1,184 @@
-import { getTenantDashboardData, requireAuthenticatedProfile } from "@/lib/auth/user";
-
-export const dynamic = "force-dynamic";
+import { redirect } from "next/navigation";
+import { requireAuthenticatedProfile } from "@/lib/auth/user";
+import { getTenantDashboardData } from "@/lib/data/tenant";
 
 export default async function TenantDashboardPage() {
-  const profile = await requireAuthenticatedProfile("tenant");
+  let profile;
+  try {
+    profile = await requireAuthenticatedProfile(["tenant"]);
+  } catch {
+    redirect("/logowanie");
+  }
+
   const data = await getTenantDashboardData(profile.id);
 
   return (
-    <main
-      style={{
-        minHeight: "100dvh",
-        padding: "32px",
-        background: "#f6f8fc"
-      }}
-    >
-      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+    <main style={{ padding: "2rem", maxWidth: "800px", margin: "0 auto" }}>
+      <h1 style={{ fontSize: "22px", fontWeight: 500, marginBottom: "8px" }}>
+        Witaj, {profile.full_name || profile.email}!
+      </h1>
+
+      {!data.assignment ? (
         <div
           style={{
-            background: "#ffffff",
-            borderRadius: 24,
-            padding: 24,
-            border: "1px solid #e7ecf5",
-            boxShadow: "0 10px 30px rgba(20, 40, 90, 0.06)"
+            background: "var(--color-background-warning)",
+            color: "var(--color-text-warning)",
+            border: "0.5px solid var(--color-border-warning)",
+            borderRadius: "var(--border-radius-md)",
+            padding: "16px",
+            marginTop: "1rem",
           }}
         >
-          <div style={{ fontSize: 14, color: "#64748b", marginBottom: 8 }}>
-            Zalogowano jako
-          </div>
-
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 36,
-              lineHeight: 1.1,
-              fontWeight: 800,
-              color: "#0f172a"
-            }}
-          >
-            Panel najemcy
-          </h1>
-
-          <p
-            style={{
-              marginTop: 12,
-              color: "#475569",
-              fontSize: 16,
-              lineHeight: 1.6
-            }}
-          >
-            Witaj {profile.full_name || profile.email || "Najemco"}.
-          </p>
-
-          <div
-            style={{
-              marginTop: 24,
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 16
-            }}
-          >
-            <div style={{ background: "#eefbf3", borderRadius: 18, padding: 20 }}>
-              <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>Rola</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: "#15803d" }}>tenant</div>
-            </div>
-
-            <div style={{ background: "#f8fafc", borderRadius: 18, padding: 20 }}>
-              <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>Mieszkanie</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a" }}>
-                {data.apartment?.name || "Brak przypisanego mieszkania"}
-              </div>
-            </div>
-          </div>
+          Nie masz jeszcze przypisanego mieszkania. Skontaktuj się z
+          administratorem.
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Mieszkanie */}
+          <section style={{ marginBottom: "2rem" }}>
+            <div
+              style={{
+                background: "var(--color-background-primary)",
+                border: "0.5px solid var(--color-border-tertiary)",
+                borderRadius: "var(--border-radius-lg)",
+                padding: "1rem 1.25rem",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "var(--color-text-secondary)",
+                  margin: "0 0 4px",
+                }}
+              >
+                Twoje mieszkanie
+              </p>
+              <p
+                style={{ fontSize: "16px", fontWeight: 500, margin: "0 0 4px" }}
+              >
+                {data.assignment.apartment_name}
+              </p>
+              <p
+                style={{
+                  fontSize: "14px",
+                  color: "var(--color-text-secondary)",
+                  margin: 0,
+                }}
+              >
+                {data.assignment.apartment_address}
+              </p>
+            </div>
+          </section>
+
+          {/* Ostatnie odczyty */}
+          {data.recentReadings.length > 0 && (
+            <section style={{ marginBottom: "2rem" }}>
+              <h2
+                style={{
+                  fontSize: "18px",
+                  fontWeight: 500,
+                  marginBottom: "12px",
+                }}
+              >
+                Ostatnie odczyty
+              </h2>
+              <div
+                style={{
+                  background: "var(--color-background-primary)",
+                  border: "0.5px solid var(--color-border-tertiary)",
+                  borderRadius: "var(--border-radius-lg)",
+                  overflow: "hidden",
+                }}
+              >
+                {data.recentReadings.map((r, i) => (
+                  <div
+                    key={r.id}
+                    style={{
+                      padding: "12px 16px",
+                      borderBottom:
+                        i < data.recentReadings.length - 1
+                          ? "0.5px solid var(--color-border-tertiary)"
+                          : "none",
+                      display: "flex",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <span style={{ fontSize: "14px" }}>{r.type}</span>
+                    <span style={{ fontSize: "14px", fontWeight: 500 }}>
+                      {r.value} {r.unit}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Ostatnie rozliczenia */}
+          {data.recentSettlements.length > 0 && (
+            <section>
+              <h2
+                style={{
+                  fontSize: "18px",
+                  fontWeight: 500,
+                  marginBottom: "12px",
+                }}
+              >
+                Ostatnie rozliczenia
+              </h2>
+              <div
+                style={{
+                  background: "var(--color-background-primary)",
+                  border: "0.5px solid var(--color-border-tertiary)",
+                  borderRadius: "var(--border-radius-lg)",
+                  overflow: "hidden",
+                }}
+              >
+                {data.recentSettlements.map((s, i) => (
+                  <div
+                    key={s.id}
+                    style={{
+                      padding: "12px 16px",
+                      borderBottom:
+                        i < data.recentSettlements.length - 1
+                          ? "0.5px solid var(--color-border-tertiary)"
+                          : "none",
+                      display: "flex",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <span style={{ fontSize: "14px", color: "var(--color-text-secondary)" }}>
+                      {s.period_start} – {s.period_end}
+                    </span>
+                    <div style={{ textAlign: "right" }}>
+                      <span style={{ fontSize: "14px", fontWeight: 500 }}>
+                        {s.amount?.toFixed(2)} zł
+                      </span>
+                      <span
+                        style={{
+                          marginLeft: "8px",
+                          fontSize: "12px",
+                          padding: "2px 8px",
+                          borderRadius: "var(--border-radius-md)",
+                          background:
+                            s.status === "paid"
+                              ? "var(--color-background-success)"
+                              : "var(--color-background-danger)",
+                          color:
+                            s.status === "paid"
+                              ? "var(--color-text-success)"
+                              : "var(--color-text-danger)",
+                        }}
+                      >
+                        {s.status === "paid" ? "Opłacone" : "Nieopłacone"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
     </main>
   );
 }
