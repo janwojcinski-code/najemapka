@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireAuthenticatedProfile } from "@/lib/auth/user";
 import { getTenantDashboardData } from "@/lib/data/tenant";
 import Link from "next/link";
+import TenantTopbar from "@/components/tenant-topbar";
 
 export default async function TenantDashboardPage() {
   let profile;
@@ -22,6 +23,8 @@ export default async function TenantDashboardPage() {
 
   return (
     <main style={{ padding: "1.5rem", maxWidth: "480px", margin: "0 auto", fontFamily: "sans-serif" }}>
+      <TenantTopbar />
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <div
@@ -158,7 +161,6 @@ export default async function TenantDashboardPage() {
                 const prevVal = prev?.[key as keyof typeof prev] as number | null;
                 if (val == null) return null;
                 const diff = prevVal != null ? val - prevVal : null;
-
                 return (
                   <div
                     key={key}
@@ -179,13 +181,10 @@ export default async function TenantDashboardPage() {
                       </div>
                       <span style={{ fontSize: "12px", color: "#aaa" }}>{unit.toUpperCase()}</span>
                     </div>
-
                     <div style={{ fontSize: "24px", fontWeight: 700, margin: "6px 0 4px" }}>
                       {val.toLocaleString("pl-PL")} {unit}
                     </div>
-
                     <div style={{ fontSize: "12px", color: "#888" }}>Data: {latest.reading_date}</div>
-
                     {diff != null && (
                       <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px", fontSize: "13px" }}>
                         <span style={{ color: "#888" }}>Zużycie mies.</span>
@@ -243,43 +242,7 @@ export default async function TenantDashboardPage() {
         </>
       )}
 
-      <div
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: "white",
-          borderTop: "1px solid #eee",
-          display: "flex",
-          justifyContent: "space-around",
-          padding: "10px 0 16px",
-        }}
-      >
-        {[
-          { label: "Panel", icon: "⊞", href: "/najemca/dashboard", active: true },
-          { label: "Mieszkania", icon: "🏢", href: "/najemca/mieszkania", active: false },
-          { label: "Odczyty", icon: "📊", href: "/najemca/odczyty", active: false },
-          { label: "Rozliczenia", icon: "🧾", href: "/najemca/rozliczenia", active: false },
-        ].map((item) => (
-          <Link key={item.href} href={item.href} style={{ textDecoration: "none" }}>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "20px" }}>{item.icon}</div>
-              <div
-                style={{
-                  fontSize: "11px",
-                  color: item.active ? "#1a3a6b" : "#aaa",
-                  fontWeight: item.active ? 600 : 400,
-                }}
-              >
-                {item.label}
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      <div style={{ height: "70px" }} />
+      <div style={{ height: "20px" }} />
     </main>
   );
 }
