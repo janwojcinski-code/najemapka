@@ -1,83 +1,162 @@
-import Link from "next/link";
-import { Download, ReceiptText } from "lucide-react";
-import { settlements } from "@/lib/mock-data";
-import { Badge } from "@/components/ui/badge";
-import { formatCurrency } from "@/lib/utils";
-import { MobileBottomNav } from "@/components/layout/mobile-nav";
+import { redirect } from "next/navigation";
+import { requireAuthenticatedProfile } from "@/lib/auth/user";
+import { createClient } from "@/lib/supabase/server";
 
-export default function TenantSettlementsPage() {
+export default async function TenantSettlementsPage() {
+  let profile;
+  try {
+    profile = await requireAuthenticatedProfile(["tenant"]);
+  } catch {
+    redirect("/logowanie");
+  }
+
+  const supabase = await createClient();
+
+  const { data: assignment } = await supabase
+    .from("tenant_assignments")
+    .select("apartment_id")
+    .eq("tenant_user_id", profile.id)
+    .is("end_date", null)
+    .single();
+
+  if (!assignment) {
+    redirect("/najemca/dashboard");
+  }
+
+  const { data: settlements } = await supabase
+    .from("settlements")
+    .select("id, month, year, total_amount, status")
+    .eq("apartment_id", assignment.apartment_id)
+    .order("year", { ascending: false })
+    .order("month", { ascending: false });
+
+  const unpaidSum = (settlements ?? [])
+    .filter((s) => s.status !== "paid")
+    .reduce((sum, s) => sum + (s.total_amount ?? 0), 0);
+
+  const paidSum = (settlements ?? [])
+    .filter((s) => s.status === "paid")
+    .reduce((sum, s) => sum + (s.total_amount ?? 0), 0);
+
   return (
-    <div className="page-shell">
-      <main className="main-content">
-        <div className="page-container">
-          <div className="topbar">
-            <div>
-              <h1 className="page-title">Moje rozliczenia</h1>
-              <p className="page-subtitle">Zarządzaj swoimi wydatkami i fakturami w jednym miejscu.</p>
-            </div>
-            <Link href="#" className="helper-link">Filtruj</Link>
+    <main style={{ padding: "2rem", maxWidth: "900px", margin: "0 auto" }}>
+      <h1 style={{ fontSize: "32px", fontWeight: 700, marginBottom: "8px" }}>
+        Moje rozliczenia
+      </h1>
+      <p style={{ margin: "0 0 24px", color: "#667085" }}>
+        Zarządzaj wydatkami i historią rozliczeń.
+      </p>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "16px",
+          marginBottom: "24px",
+        }}
+      >
+        <div
+          style={{
+            background: "#FEF2F2",
+            border: "1px solid #FECACA",
+            borderRadius: "18px",
+            padding: "20px",
+          }}
+        >
+          <div style={{ fontSize: "12px", color: "#991B1B", marginBottom: "8px" }}>
+            DO ZAPŁATY
           </div>
-
-          <div className="grid-2">
-            <div className="stat-card">
-              <div style={{ color: "#6e7788", fontWeight: 800, textTransform: "uppercase", fontSize: 12 }}>Do zapłaty</div>
-              <div className="stat-value" style={{ color: "#c02828" }}>124,50 zł</div>
-            </div>
-            <div className="stat-card soft">
-              <div style={{ color: "#0b5db6", fontWeight: 800, textTransform: "uppercase", fontSize: 12 }}>Suma opłacona</div>
-              <div className="stat-value" style={{ color: "#0b5db6" }}>2 450 zł</div>
-            </div>
-          </div>
-
-          <div className="item-list">
-            {settlements.map((item) => (
-              <Link href={`/najemca/rozliczenia/${item.id}`} key={item.id} className="section-card" style={{ display: "grid", gap: 18 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 16, alignItems: "center" }}>
-                  <div className={`icon-box ${item.status === "paid" ? "green" : "red"}`}>
-                    <ReceiptText size={20} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 18, fontWeight: 900 }}>Faktura #{item.period_month.replace("-", "/")}</div>
-                    <div style={{ color: "#667081" }}>Data wystawienia: {item.issue_date}</div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 20, fontWeight: 900 }}>{formatCurrency(item.total_amount)}</div>
-                    <Badge variant={item.status === "paid" ? "success" : "danger"}>{item.status === "paid" ? "Opłacone" : "Nieopłacone"}</Badge>
-                  </div>
-                </div>
-
-                <div style={{ background: "#f3f5fd", borderRadius: 16, padding: 16, display: "grid", gap: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                    <span>Energia elektryczna</span>
-                    <strong>85,20 zł</strong>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                    <span>Zużycie wody</span>
-                    <strong>24,30 zł</strong>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                    <span>Opłata abonamentowa</span>
-                    <strong>15,00 zł</strong>
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  {item.status === "unpaid" ? (
-                    <span className="btn btn-primary" style={{ minWidth: 220 }}>Opłać teraz</span>
-                  ) : (
-                    <span className="helper-link" style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-                      <Download size={16} />
-                      Pobierz PDF
-                    </span>
-                  )}
-                </div>
-              </Link>
-            ))}
+          <div style={{ fontSize: "36px", fontWeight: 700, color: "#B91C1C" }}>
+            {unpaidSum.toFixed(2)} zł
           </div>
         </div>
-      </main>
 
-      <MobileBottomNav />
-    </div>
+        <div
+          style={{
+            background: "#EFF6FF",
+            border: "1px solid #BFDBFE",
+            borderRadius: "18px",
+            padding: "20px",
+          }}
+        >
+          <div style={{ fontSize: "12px", color: "#1D4ED8", marginBottom: "8px" }}>
+            SUMA OPŁACONA
+          </div>
+          <div style={{ fontSize: "36px", fontWeight: 700, color: "#1D4ED8" }}>
+            {paidSum.toFixed(2)} zł
+          </div>
+        </div>
+      </div>
+
+      <div
+        style={{
+          background: "white",
+          border: "1px solid #E5E7EB",
+          borderRadius: "20px",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "120px 120px 1fr 140px",
+            gap: "16px",
+            padding: "16px 20px",
+            borderBottom: "1px solid #E5E7EB",
+            fontSize: "13px",
+            color: "#667085",
+            fontWeight: 600,
+          }}
+        >
+          <div>Miesiąc</div>
+          <div>Rok</div>
+          <div>Status</div>
+          <div>Kwota</div>
+        </div>
+
+        {(settlements ?? []).length === 0 ? (
+          <div style={{ padding: "24px 20px", color: "#667085" }}>
+            Brak rozliczeń.
+          </div>
+        ) : (
+          settlements?.map((settlement) => (
+            <div
+              key={settlement.id}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "120px 120px 1fr 140px",
+                gap: "16px",
+                padding: "16px 20px",
+                borderBottom: "1px solid #F1F5F9",
+                alignItems: "center",
+              }}
+            >
+              <div>{settlement.month}</div>
+              <div>{settlement.year}</div>
+              <div>
+                <span
+                  style={{
+                    display: "inline-block",
+                    padding: "6px 10px",
+                    borderRadius: "999px",
+                    background:
+                      settlement.status === "paid" ? "#DCFCE7" : "#FEF2F2",
+                    color:
+                      settlement.status === "paid" ? "#166534" : "#B91C1C",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                  }}
+                >
+                  {settlement.status === "paid" ? "Opłacone" : "Nieopłacone"}
+                </span>
+              </div>
+              <div style={{ fontWeight: 700 }}>
+                {settlement.total_amount?.toFixed(2)} zł
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </main>
   );
 }
