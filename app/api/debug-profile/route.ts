@@ -1,0 +1,27 @@
+import { createClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
+
+export async function GET() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json({ error: "No session" }, { status: 401 });
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, email, full_name, role, created_at")
+    .eq("id", user.id)
+    .single();
+
+  return NextResponse.json({
+    user: { id: user.id, email: user.email },
+    profile: profile ?? null,
+    profileError: profileError?.message ?? null,
+  });
+}
