@@ -34,7 +34,6 @@ export default async function TenantDashboardPage() {
         </div>
       ) : (
         <>
-          {/* Mieszkanie */}
           <section style={{ marginBottom: "2rem" }}>
             <div
               style={{
@@ -70,7 +69,6 @@ export default async function TenantDashboardPage() {
             </div>
           </section>
 
-          {/* Ostatnie odczyty */}
           {data.recentReadings.length > 0 && (
             <section style={{ marginBottom: "2rem" }}>
               <h2
@@ -113,7 +111,6 @@ export default async function TenantDashboardPage() {
             </section>
           )}
 
-          {/* Ostatnie rozliczenia */}
           {data.recentSettlements.length > 0 && (
             <section>
               <h2
@@ -144,9 +141,15 @@ export default async function TenantDashboardPage() {
                           : "none",
                       display: "flex",
                       justifyContent: "space-between",
+                      alignItems: "center",
                     }}
                   >
-                    <span style={{ fontSize: "14px", color: "var(--color-text-secondary)" }}>
+                    <span
+                      style={{
+                        fontSize: "14px",
+                        color: "var(--color-text-secondary)",
+                      }}
+                    >
                       {s.period_start} – {s.period_end}
                     </span>
                     <div style={{ textAlign: "right" }}>
