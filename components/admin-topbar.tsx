@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { logout } from "@/app/actions/logout";
-
+import { logout } from "@/lib/actions/logout";
 export default function AdminTopbar() {
   return (
     <div
