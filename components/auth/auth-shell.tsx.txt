@@ -1,0 +1,114 @@
+import Link from "next/link";
+import type { ReactNode } from "react";
+
+type AuthShellProps = {
+  title: string;
+  subtitle: string;
+  children: ReactNode;
+  footerText?: string;
+  footerLinkHref?: string;
+  footerLinkLabel?: string;
+};
+
+export function AuthShell({
+  title,
+  subtitle,
+  children,
+  footerText,
+  footerLinkHref,
+  footerLinkLabel
+}: AuthShellProps) {
+  return (
+    <main
+      style={{
+        minHeight: "100dvh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+        background:
+          "linear-gradient(180deg, #f5f8ff 0%, #eef3ff 100%)"
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 460
+        }}
+      >
+        <div
+          style={{
+            background: "#ffffff",
+            borderRadius: 28,
+            padding: 28,
+            boxShadow: "0 20px 60px rgba(28, 54, 122, 0.10)",
+            border: "1px solid #e7ecf5"
+          }}
+        >
+          <div style={{ marginBottom: 24 }}>
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: "#5b6b8a",
+                marginBottom: 10,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase"
+              }}
+            >
+              Media pod kontrolą
+            </div>
+
+            <h1
+              style={{
+                margin: 0,
+                fontSize: 32,
+                lineHeight: 1.1,
+                fontWeight: 800,
+                color: "#111827"
+              }}
+            >
+              {title}
+            </h1>
+
+            <p
+              style={{
+                margin: "12px 0 0",
+                fontSize: 15,
+                lineHeight: 1.6,
+                color: "#667085"
+              }}
+            >
+              {subtitle}
+            </p>
+          </div>
+
+          {children}
+
+          {footerText && footerLinkHref && footerLinkLabel ? (
+            <div
+              style={{
+                marginTop: 24,
+                textAlign: "center",
+                fontSize: 14,
+                color: "#667085"
+              }}
+            >
+              {footerText}{" "}
+              <Link
+                href={footerLinkHref}
+                style={{
+                  color: "#2754d7",
+                  fontWeight: 700,
+                  textDecoration: "none"
+                }}
+              >
+                {footerLinkLabel}
+              </Link>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </main>
+  );
+}
