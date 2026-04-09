@@ -1,0 +1,56 @@
+export async function getTenantDashboardData(
+  tenantId: string
+): Promise<TenantDashboardData> {
+  const supabase = await createClient();
+
+  const { data: assignment } = await supabase
+    .from("tenant_assignments")
+    .select(
+      `
+      id,
+      apartment_id,
+      apartments (
+        id,
+        name,
+        address
+      )
+    `
+    )
+    .eq("tenant_user_id", tenantId)   // <-- poprawka
+    .is("end_date", null)             // <-- poprawka: aktywne = bez end_date
+    .single();
+
+  if (!assignment) {
+    return { assignment: null, recentReadings: [], recentSettlements: [] };
+  }
+
+  const apt = Array.isArray(assignment.apartments)
+    ? assignment.apartments[0]
+    : assignment.apartments;
+
+  const [readingsRes, settlementsRes] = await Promise.all([
+    supabase
+      .from("meter_readings")
+      .select("id, type, value, unit, read_at")
+      .eq("apartment_id", assignment.apartment_id)
+      .order("read_at", { ascending: false })
+      .limit(5),
+    supabase
+      .from("settlements")
+      .select("id, amount, status, period_start, period_end")
+      .eq("apartment_id", assignment.apartment_id)
+      .order("period_start", { ascending: false })
+      .limit(5),
+  ]);
+
+  return {
+    assignment: {
+      id: assignment.id,
+      apartment_id: assignment.apartment_id,
+      apartment_name: apt?.name ?? "Brak nazwy",
+      apartment_address: apt?.address ?? "Brak adresu",
+    },
+    recentReadings: readingsRes.data ?? [],
+    recentSettlements: settlementsRes.data ?? [],
+  };
+}
