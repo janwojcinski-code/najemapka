@@ -1,9 +1,10 @@
-import { requireAuthenticatedProfile } from "@/lib/auth/user";
+import { getTenantDashboardData, requireAuthenticatedProfile } from "@/lib/auth/user";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminDashboardPage() {
-  const profile = await requireAuthenticatedProfile("admin");
+export default async function TenantDashboardPage() {
+  const profile = await requireAuthenticatedProfile("tenant");
+  const data = await getTenantDashboardData(profile.id);
 
   return (
     <main
@@ -13,12 +14,7 @@ export default async function AdminDashboardPage() {
         background: "#f6f8fc"
       }}
     >
-      <div
-        style={{
-          maxWidth: 1100,
-          margin: "0 auto"
-        }}
-      >
+      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
         <div
           style={{
             background: "#ffffff",
@@ -28,13 +24,7 @@ export default async function AdminDashboardPage() {
             boxShadow: "0 10px 30px rgba(20, 40, 90, 0.06)"
           }}
         >
-          <div
-            style={{
-              fontSize: 14,
-              color: "#64748b",
-              marginBottom: 8
-            }}
-          >
+          <div style={{ fontSize: 14, color: "#64748b", marginBottom: 8 }}>
             Zalogowano jako
           </div>
 
@@ -47,7 +37,7 @@ export default async function AdminDashboardPage() {
               color: "#0f172a"
             }}
           >
-            Panel administratora
+            Panel najemcy
           </h1>
 
           <p
@@ -58,7 +48,7 @@ export default async function AdminDashboardPage() {
               lineHeight: 1.6
             }}
           >
-            Witaj {profile.full_name || profile.email || "Administrator"}.
+            Witaj {profile.full_name || profile.email || "Najemco"}.
           </p>
 
           <div
@@ -69,33 +59,15 @@ export default async function AdminDashboardPage() {
               gap: 16
             }}
           >
-            <div
-              style={{
-                background: "#eef4ff",
-                borderRadius: 18,
-                padding: 20
-              }}
-            >
-              <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>
-                Rola
-              </div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: "#1d4ed8" }}>
-                admin
-              </div>
+            <div style={{ background: "#eefbf3", borderRadius: 18, padding: 20 }}>
+              <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>Rola</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: "#15803d" }}>tenant</div>
             </div>
 
-            <div
-              style={{
-                background: "#f8fafc",
-                borderRadius: 18,
-                padding: 20
-              }}
-            >
-              <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>
-                Email
-              </div>
+            <div style={{ background: "#f8fafc", borderRadius: 18, padding: 20 }}>
+              <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>Mieszkanie</div>
               <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a" }}>
-                {profile.email || "brak"}
+                {data.apartment?.name || "Brak przypisanego mieszkania"}
               </div>
             </div>
           </div>
