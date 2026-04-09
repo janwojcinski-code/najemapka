@@ -1,7 +1,17 @@
-import { NextResponse } from "next/server";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getRedirectPathForRole } from "@/lib/auth/roles";
+import type { UserRole } from "@/types";
 
-export async function GET() {
+export type ProfileRow = {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  role: UserRole;
+  created_at?: string;
+};
+
+export async function getCurrentUserProfile(): Promise<ProfileRow | null> {
   const supabase = await createClient();
 
   const {
@@ -10,12 +20,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    return NextResponse.json({
-      ok: false,
-      step: "getUser",
-      user: null,
-      userError
-    });
+    return null;
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -24,10 +29,29 @@ export async function GET() {
     .eq("id", user.id)
     .maybeSingle();
 
-  return NextResponse.json({
-    ok: !profileError,
-    user,
-    profile,
-    profileError
-  });
+  if (profileError) {
+    throw new Error(`Błąd odczytu public.profiles: ${profileError.message}`);
+  }
+
+  return (profile as ProfileRow | null) ?? null;
+}
+
+export async function requireAuthenticatedProfile(
+  allowedRole?: UserRole
+): Promise<ProfileRow> {
+  const profile = await getCurrentUserProfile();
+
+  if (!profile) {
+    redirect("/logowanie?error=missing_profile");
+  }
+
+  if (profile.role !== "admin" && profile.role !== "tenant") {
+    redirect("/logowanie?error=unknown_role");
+  }
+
+  if (allowedRole && profile.role !== allowedRole) {
+    redirect(getRedirectPathForRole(profile.role));
+  }
+
+  return profile;
 }
