@@ -1,60 +1,121 @@
-import { AppShell } from "@/components/layout/app-shell";
-import { prices } from "@/lib/mock-data";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { requireAuthenticatedProfile } from "@/lib/auth/user";
+import { createClient } from "@/lib/supabase/server";
 
-export default function AdminPricesPage() {
+export default async function AdminTariffsPage() {
+  try {
+    await requireAuthenticatedProfile(["admin"]);
+  } catch {
+    redirect("/logowanie");
+  }
+
+  const supabase = await createClient();
+
+  const { data: tariffs } = await supabase
+    .from("utility_prices")
+    .select("*")
+    .order("effective_from", { ascending: false });
+
   return (
-    <AppShell userName="Administrator" title="Taryfy i ceny" subtitle="Zarządzaj aktualnymi stawkami za media oraz planuj przyszłe zmiany cen.">
-      <div className="grid-3">
-        {prices.map((price, index) => (
-          <div key={price.id} className={`stat-card ${index === 1 ? "primary" : "soft"}`}>
-            <div style={{ fontWeight: 800, fontSize: 24 }}>
-              {price.utility_type === "electricity" ? "Prąd" : price.utility_type === "cold_water" ? "Zimna woda" : price.utility_type === "hot_water" ? "Ciepła woda" : "Gaz"}
-            </div>
-            <div className="stat-value">{String(price.unit_gross).replace(".", ",")} <span style={{ fontSize: 24, fontWeight: 700 }}>{price.unit_label}</span></div>
-            <div>Obowiązuje od: {price.valid_from}</div>
-            <div style={{ marginTop: 18 }}>
-              <Badge variant={price.is_active ? "success" : "muted"}>{price.is_active ? "Aktualna" : "Archiwalna"}</Badge>
-            </div>
-          </div>
-        ))}
+    <main style={{ padding: "2rem", maxWidth: "1100px", margin: "0 auto" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "1.5rem",
+        }}
+      >
+        <div>
+          <h1 style={{ fontSize: "32px", fontWeight: 700, margin: "0 0 8px" }}>
+            Taryfy i ceny
+          </h1>
+          <p style={{ margin: 0, color: "#667085" }}>
+            Zarządzaj stawkami dla mediów.
+          </p>
+        </div>
+
+        <Link
+          href="/admin/taryfy/nowe"
+          style={{
+            background: "#0B5CAD",
+            color: "white",
+            textDecoration: "none",
+            padding: "12px 18px",
+            borderRadius: "999px",
+            fontWeight: 600,
+          }}
+        >
+          + Dodaj nową stawkę
+        </Link>
       </div>
 
-      <div className="section-card">
-        <div className="section-head">
-          <h2 style={{ margin: 0 }}>Historia zmian i wersjonowanie</h2>
-          <Button variant="secondary">Dodaj nową stawkę</Button>
+      <div
+        style={{
+          background: "white",
+          border: "1px solid #E5E7EB",
+          borderRadius: "20px",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "180px 180px 180px 1fr",
+            gap: "16px",
+            padding: "16px 20px",
+            borderBottom: "1px solid #E5E7EB",
+            fontSize: "13px",
+            color: "#667085",
+            fontWeight: 600,
+          }}
+        >
+          <div>Medium</div>
+          <div>Stawka</div>
+          <div>Obowiązuje od</div>
+          <div>Status</div>
         </div>
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Medium</th>
-                <th>Stawka netto</th>
-                <th>VAT</th>
-                <th>Brutto</th>
-                <th>Obowiązuje od</th>
-                <th>Obowiązuje do</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {prices.map((price) => (
-                <tr key={price.id}>
-                  <td>{price.utility_type}</td>
-                  <td>{price.unit_net} {price.unit_label}</td>
-                  <td>{price.vat_rate}%</td>
-                  <td><strong>{price.unit_gross} {price.unit_label}</strong></td>
-                  <td>{price.valid_from}</td>
-                  <td>{price.valid_to ?? "bezterminowo"}</td>
-                  <td><Badge variant={price.is_active ? "success" : "muted"}>{price.is_active ? "Aktualna" : "Archiwalna"}</Badge></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+
+        {(tariffs ?? []).length === 0 ? (
+          <div style={{ padding: "24px 20px", color: "#667085" }}>
+            Brak taryf.
+          </div>
+        ) : (
+          tariffs?.map((tariff: any) => (
+            <div
+              key={tariff.id}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "180px 180px 180px 1fr",
+                gap: "16px",
+                padding: "16px 20px",
+                borderBottom: "1px solid #F1F5F9",
+                alignItems: "center",
+              }}
+            >
+              <div style={{ fontWeight: 600 }}>{tariff.utility_type || "—"}</div>
+              <div>{tariff.price_gross ?? tariff.price ?? "—"}</div>
+              <div>{tariff.effective_from || "—"}</div>
+              <div>
+                <span
+                  style={{
+                    display: "inline-block",
+                    padding: "6px 10px",
+                    borderRadius: "999px",
+                    background: "#DBEAFE",
+                    color: "#1D4ED8",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                  }}
+                >
+                  Aktywna / archiwalna wg dat
+                </span>
+              </div>
+            </div>
+          ))
+        )}
       </div>
-    </AppShell>
+    </main>
   );
 }
