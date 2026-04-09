@@ -64,7 +64,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/najemca/dashboard", request.url));
   }
 
-  // Admin próbuje wejść na /najemca/* (opcjonalne — pozwalamy lub blokujemy)
+  // Admin próbuje wejść na /najemca/*
   if (pathname.startsWith("/najemca") && role !== "tenant") {
     return NextResponse.redirect(new URL("/admin/dashboard", request.url));
   }
