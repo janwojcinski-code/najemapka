@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Eye, Lock, Mail } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,6 +10,8 @@ import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import type { UserRole } from "@/types";
+import { getRedirectPathForRole } from "@/lib/auth/roles";
 
 const schema = z.object({
   email: z.string().email("Podaj poprawny adres email."),
@@ -17,10 +20,30 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+type ProfileRoleResponse = {
+  role: UserRole;
+};
+
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [serverMessage, setServerMessage] = useState("");
   const supabase = createClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const fallbackMessage = useMemo(() => {
+    const errorCode = searchParams.get("error");
+
+    if (errorCode === "missing_profile") {
+      return "Nie znaleziono profilu użytkownika w systemie. Skontaktuj się z administratorem.";
+    }
+
+    if (errorCode === "unknown_role") {
+      return "Nie udało się ustalić roli użytkownika. Skontaktuj się z administratorem.";
+    }
+
+    return "";
+  }, [searchParams]);
 
   const {
     register,
@@ -34,18 +57,58 @@ export function LoginForm() {
   const onSubmit = async (values: FormValues) => {
     setServerMessage("");
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error: signInError } = await supabase.auth.signInWithPassword({
       email: values.email,
       password: values.password
     });
 
-    if (error) {
+    if (signInError) {
       setServerMessage("Nie udało się zalogować. Sprawdź dane lub konfigurację Supabase.");
       return;
     }
 
-    window.location.href = "/najemca/dashboard";
+    const {
+      data: { user },
+      error: userError
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setServerMessage("Logowanie powiodło się, ale nie udało się pobrać danych użytkownika.");
+      return;
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      setServerMessage("Nie udało się pobrać roli użytkownika z profilu.");
+      return;
+    }
+
+    if (!profile) {
+      await supabase.auth.signOut();
+      router.replace("/logowanie?error=missing_profile");
+      router.refresh();
+      return;
+    }
+
+    const typedProfile = profile as ProfileRoleResponse;
+
+    if (typedProfile.role !== "admin" && typedProfile.role !== "tenant") {
+      await supabase.auth.signOut();
+      router.replace("/logowanie?error=unknown_role");
+      router.refresh();
+      return;
+    }
+
+    router.replace(getRedirectPathForRole(typedProfile.role));
+    router.refresh();
   };
+
+  const visibleMessage = serverMessage || fallbackMessage;
 
   return (
     <form className="form-grid" onSubmit={handleSubmit(onSubmit)}>
@@ -69,7 +132,7 @@ export function LoginForm() {
         />
       </div>
 
-      {serverMessage ? <div className="error">{serverMessage}</div> : null}
+      {visibleMessage ? <div className="error">{visibleMessage}</div> : null}
 
       <Button type="submit" disabled={isSubmitting}>
         Zaloguj się <ArrowRight size={18} />
