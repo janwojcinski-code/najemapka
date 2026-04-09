@@ -158,6 +158,7 @@ export default async function TenantDashboardPage() {
                 const prevVal = prev?.[key as keyof typeof prev] as number | null;
                 if (val == null) return null;
                 const diff = prevVal != null ? val - prevVal : null;
+
                 return (
                   <div
                     key={key}
@@ -178,10 +179,13 @@ export default async function TenantDashboardPage() {
                       </div>
                       <span style={{ fontSize: "12px", color: "#aaa" }}>{unit.toUpperCase()}</span>
                     </div>
+
                     <div style={{ fontSize: "24px", fontWeight: 700, margin: "6px 0 4px" }}>
                       {val.toLocaleString("pl-PL")} {unit}
                     </div>
+
                     <div style={{ fontSize: "12px", color: "#888" }}>Data: {latest.reading_date}</div>
+
                     {diff != null && (
                       <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px", fontSize: "13px" }}>
                         <span style={{ color: "#888" }}>Zużycie mies.</span>
