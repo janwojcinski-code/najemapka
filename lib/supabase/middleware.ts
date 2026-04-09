@@ -45,6 +45,7 @@ export async function updateSession(request: NextRequest) {
   );
 
   const pathname = request.nextUrl.pathname;
+  const currentError = request.nextUrl.searchParams.get("error");
 
   const {
     data: { user }
@@ -67,25 +68,44 @@ export async function updateSession(request: NextRequest) {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profileError || !profile) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/logowanie";
-    redirectUrl.searchParams.set("error", "missing_profile");
-    return NextResponse.redirect(redirectUrl);
+  const hasValidRole =
+    !profileError &&
+    profile &&
+    (profile as ProfileRoleResponse).role &&
+    ((profile as ProfileRoleResponse).role === "admin" ||
+      (profile as ProfileRoleResponse).role === "tenant");
+
+  if (!hasValidRole) {
+    if (isAuthRoute(pathname)) {
+      return response;
+    }
+
+    if (isAdminRoute(pathname) || isTenantRoute(pathname) || pathname === "/") {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/logowanie";
+      redirectUrl.searchParams.set(
+        "error",
+        profileError ? "profile_access_error" : "missing_profile"
+      );
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    return response;
   }
 
   const typedProfile = profile as ProfileRoleResponse;
-
-  if (typedProfile.role !== "admin" && typedProfile.role !== "tenant") {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/logowanie";
-    redirectUrl.searchParams.set("error", "unknown_role");
-    return NextResponse.redirect(redirectUrl);
-  }
-
   const targetDashboard = getRedirectPathForRole(typedProfile.role);
 
   if (isAuthRoute(pathname) || pathname === "/") {
+    if (
+      pathname === "/logowanie" &&
+      (currentError === "missing_profile" ||
+        currentError === "unknown_role" ||
+        currentError === "profile_access_error")
+    ) {
+      return response;
+    }
+
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = targetDashboard;
     redirectUrl.searchParams.delete("error");
