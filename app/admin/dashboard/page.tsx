@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAuthenticatedProfile } from "@/lib/auth/user";
 import { getAdminDashboardData } from "@/lib/data/admin";
+import AdminTopbar from "@/components/admin-topbar";
 
 export default async function AdminDashboardPage() {
   let profile;
@@ -14,6 +15,8 @@ export default async function AdminDashboardPage() {
 
   return (
     <main style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
+      <AdminTopbar />
+
       <h1 style={{ fontSize: "22px", fontWeight: 500, marginBottom: "8px" }}>
         Panel Admina
       </h1>
