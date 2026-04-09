@@ -3,7 +3,36 @@ import { redirect } from "next/navigation";
 import { requireAuthenticatedProfile } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function AdminAssignmentsPage() {
+async function endAssignment(formData: FormData) {
+  "use server";
+
+  const supabase = await createClient();
+
+  const id = Number(formData.get("id"));
+  if (!id) {
+    redirect("/admin/przypisania");
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { error } = await supabase
+    .from("tenant_assignments")
+    .update({ end_date: today })
+    .eq("id", id)
+    .is("end_date", null);
+
+  if (error) {
+    redirect("/admin/przypisania?error=end_failed");
+  }
+
+  redirect("/admin/przypisania");
+}
+
+export default async function AdminAssignmentsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ error?: string }>;
+}) {
   try {
     await requireAuthenticatedProfile(["admin"]);
   } catch {
@@ -34,6 +63,12 @@ export default async function AdminAssignmentsPage() {
     `
     )
     .order("id", { ascending: false });
+
+  const params = (await searchParams) || {};
+  const error =
+    params.error === "end_failed"
+      ? "Nie udało się zakończyć przypisania."
+      : null;
 
   return (
     <main style={{ padding: "2rem", maxWidth: "1100px", margin: "0 auto" }}>
@@ -69,6 +104,21 @@ export default async function AdminAssignmentsPage() {
         </Link>
       </div>
 
+      {error && (
+        <div
+          style={{
+            marginBottom: "16px",
+            padding: "12px 14px",
+            borderRadius: "12px",
+            background: "#FEF2F2",
+            color: "#B91C1C",
+            border: "1px solid #FECACA",
+          }}
+        >
+          {error}
+        </div>
+      )}
+
       <div
         style={{
           background: "white",
@@ -80,7 +130,7 @@ export default async function AdminAssignmentsPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "80px 1.5fr 1.5fr 140px 140px",
+            gridTemplateColumns: "80px 1.4fr 1.4fr 120px 120px 180px",
             gap: "16px",
             padding: "16px 20px",
             borderBottom: "1px solid #E5E7EB",
@@ -94,6 +144,7 @@ export default async function AdminAssignmentsPage() {
           <div>Najemca</div>
           <div>Start</div>
           <div>Status</div>
+          <div>Akcja</div>
         </div>
 
         {(assignments ?? []).length === 0 ? (
@@ -117,7 +168,7 @@ export default async function AdminAssignmentsPage() {
                 key={assignment.id}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "80px 1.5fr 1.5fr 140px 140px",
+                  gridTemplateColumns: "80px 1.4fr 1.4fr 120px 120px 180px",
                   gap: "16px",
                   padding: "16px 20px",
                   borderBottom: "1px solid #F1F5F9",
@@ -125,12 +176,14 @@ export default async function AdminAssignmentsPage() {
                 }}
               >
                 <div style={{ fontWeight: 600 }}>{assignment.id}</div>
+
                 <div>
                   <div style={{ fontWeight: 600 }}>{apartment?.name || "—"}</div>
                   <div style={{ fontSize: "13px", color: "#667085" }}>
                     {apartment?.address || "—"}
                   </div>
                 </div>
+
                 <div>
                   <div style={{ fontWeight: 600 }}>
                     {tenant?.full_name || tenant?.email || "—"}
@@ -139,7 +192,9 @@ export default async function AdminAssignmentsPage() {
                     {tenant?.email || "—"}
                   </div>
                 </div>
+
                 <div>{assignment.start_date}</div>
+
                 <div>
                   <span
                     style={{
@@ -154,6 +209,32 @@ export default async function AdminAssignmentsPage() {
                   >
                     {active ? "Aktywne" : "Zakończone"}
                   </span>
+                </div>
+
+                <div>
+                  {active ? (
+                    <form action={endAssignment}>
+                      <input type="hidden" name="id" value={assignment.id} />
+                      <button
+                        type="submit"
+                        style={{
+                          background: "#111827",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "999px",
+                          padding: "10px 14px",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Zakończ przypisanie
+                      </button>
+                    </form>
+                  ) : (
+                    <span style={{ color: "#98A2B3", fontSize: "13px" }}>
+                      Brak akcji
+                    </span>
+                  )}
                 </div>
               </div>
             );
