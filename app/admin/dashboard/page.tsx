@@ -61,6 +61,21 @@ export default async function AdminDashboardPage() {
         >
           Przejdź do mieszkań
         </a>
+<a
+  href="/admin/przypisania"
+  style={{
+    display: "inline-block",
+    marginLeft: "12px",
+    background: "#111827",
+    color: "white",
+    textDecoration: "none",
+    padding: "12px 18px",
+    borderRadius: "999px",
+    fontWeight: 600,
+  }}
+>
+  Przejdź do przypisań
+</a>
       </div>
 
       {data.recentApartments.length > 0 && (
