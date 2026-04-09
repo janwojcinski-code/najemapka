@@ -1,0 +1,82 @@
+import { createClient } from "@/lib/supabase/server";
+
+export type TenantDashboardData = {
+  assignment: {
+    id: string;
+    apartment_id: string;
+    apartment_name: string;
+    apartment_address: string;
+  } | null;
+  recentReadings: {
+    id: string;
+    type: string;
+    value: number;
+    unit: string;
+    read_at: string;
+  }[];
+  recentSettlements: {
+    id: string;
+    amount: number;
+    status: string;
+    period_start: string;
+    period_end: string;
+  }[];
+};
+
+export async function getTenantDashboardData(
+  tenantId: string
+): Promise<TenantDashboardData> {
+  const supabase = await createClient();
+
+  // Aktywne przypisanie — NIE używamy apartment_id z profiles
+  const { data: assignment } = await supabase
+    .from("tenant_assignments")
+    .select(
+      `
+      id,
+      apartment_id,
+      apartments (
+        id,
+        name,
+        address
+      )
+    `
+    )
+    .eq("tenant_id", tenantId)
+    .eq("is_active", true)
+    .single();
+
+  if (!assignment) {
+    return { assignment: null, recentReadings: [], recentSettlements: [] };
+  }
+
+  const apt = Array.isArray(assignment.apartments)
+    ? assignment.apartments[0]
+    : assignment.apartments;
+
+  const [readingsRes, settlementsRes] = await Promise.all([
+    supabase
+      .from("meter_readings")
+      .select("id, type, value, unit, read_at")
+      .eq("apartment_id", assignment.apartment_id)
+      .order("read_at", { ascending: false })
+      .limit(5),
+    supabase
+      .from("settlements")
+      .select("id, amount, status, period_start, period_end")
+      .eq("apartment_id", assignment.apartment_id)
+      .order("period_start", { ascending: false })
+      .limit(5),
+  ]);
+
+  return {
+    assignment: {
+      id: assignment.id,
+      apartment_id: assignment.apartment_id,
+      apartment_name: apt?.name ?? "Brak nazwy",
+      apartment_address: apt?.address ?? "Brak adresu",
+    },
+    recentReadings: readingsRes.data ?? [],
+    recentSettlements: settlementsRes.data ?? [],
+  };
+}
