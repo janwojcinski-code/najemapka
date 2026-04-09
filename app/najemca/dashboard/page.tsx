@@ -1,97 +1,106 @@
-import Link from "next/link";
-import { Bell, CalendarClock, PlusCircle } from "lucide-react";
-import { MobileBottomNav } from "@/components/layout/mobile-nav";
-import { UsageChart } from "@/components/charts/usage-chart";
-import { formatCurrency, utilityLabel, utilityUnit } from "@/lib/utils";
-import { getTenantDashboardData, requireAuthenticatedProfile } from "@/lib/auth/user";
+import { requireAuthenticatedProfile } from "@/lib/auth/user";
 
-export default async function TenantDashboardPage() {
-  const profile = await requireAuthenticatedProfile("tenant");
-  const { apartment, latestReadings, estimatedCost, latestSettlementDate } = await getTenantDashboardData(profile);
+export const dynamic = "force-dynamic";
+
+export default async function AdminDashboardPage() {
+  const profile = await requireAuthenticatedProfile("admin");
 
   return (
-    <div className="page-shell">
-      <div className="mobile-header" style={{ display: "flex", paddingBottom: 8 }}>
-        <div className="topbar-card">
-          <div className="avatar">{profile.full_name?.slice(0, 1) ?? "N"}</div>
-          <div>
-            <div style={{ fontSize: 14, color: "#5d6677" }}>Witaj,</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#2754d7" }}>{profile.full_name || "Najemca"}</div>
+    <main
+      style={{
+        minHeight: "100dvh",
+        padding: "32px",
+        background: "#f6f8fc"
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 1100,
+          margin: "0 auto"
+        }}
+      >
+        <div
+          style={{
+            background: "#ffffff",
+            borderRadius: 24,
+            padding: 24,
+            border: "1px solid #e7ecf5",
+            boxShadow: "0 10px 30px rgba(20, 40, 90, 0.06)"
+          }}
+        >
+          <div
+            style={{
+              fontSize: 14,
+              color: "#64748b",
+              marginBottom: 8
+            }}
+          >
+            Zalogowano jako
           </div>
-        </div>
-        <Bell size={20} color="#5b667a" />
-      </div>
 
-      <main className="main-content">
-        <div className="page-container">
-          <div className="topbar" style={{ paddingBottom: 0 }}>
-            <div>
-              <h1 className="page-title">Panel najemcy</h1>
-              <p className="page-subtitle">
-                {apartment ? `Mieszkanie: ${apartment.name}, ${apartment.address}` : "Brak przypisanego mieszkania do Twojego profilu."}
-              </p>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: 36,
+              lineHeight: 1.1,
+              fontWeight: 800,
+              color: "#0f172a"
+            }}
+          >
+            Panel administratora
+          </h1>
+
+          <p
+            style={{
+              marginTop: 12,
+              color: "#475569",
+              fontSize: 16,
+              lineHeight: 1.6
+            }}
+          >
+            Witaj {profile.full_name || profile.email || "Administrator"}.
+          </p>
+
+          <div
+            style={{
+              marginTop: 24,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 16
+            }}
+          >
+            <div
+              style={{
+                background: "#eef4ff",
+                borderRadius: 18,
+                padding: 20
+              }}
+            >
+              <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>
+                Rola
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: "#1d4ed8" }}>
+                admin
+              </div>
             </div>
-          </div>
 
-          <div className="stat-card soft" style={{ minHeight: 0 }}>
-            <div style={{ color: "#5f6779", fontSize: 15 }}>Estymowany koszt (bieżący miesiąc)</div>
-            <div className="stat-value" style={{ color: "#0b5db6" }}>{formatCurrency(estimatedCost || 0)}</div>
-            <div className="pill success">
-              {latestSettlementDate ? `Ostatnie rozliczenie: ${latestSettlementDate}` : "Brak rozliczeń do wyświetlenia"}
-            </div>
-          </div>
-
-          <Link href="/najemca/odczyty" className="btn btn-primary" style={{ width: "100%", pointerEvents: apartment ? "auto" : "none", opacity: apartment ? 1 : 0.6 }}>
-            <PlusCircle size={18} />
-            Dodaj odczyt licznika
-          </Link>
-
-          <div className="section-card" style={{ borderColor: "#f3caca", background: "#fff8f8" }}>
-            <div style={{ display: "flex", gap: 14 }}>
-              <div className="icon-box red"><CalendarClock size={20} /></div>
-              <div>
-                <div style={{ fontWeight: 800, fontSize: 28 }}>Nadchodzący odczyt</div>
-                <div style={{ color: "#667081", lineHeight: 1.55 }}>Dodawaj odczyty co miesiąc, aby rozliczenia były poprawne i kompletne.</div>
-                <div style={{ marginTop: 12, color: "#c32020", fontWeight: 800 }}>
-                  {apartment ? "Sprawdź zakładkę Odczyty i uzupełnij bieżący stan liczników." : "Skontaktuj się z administratorem, aby przypisać mieszkanie do profilu."}
-                </div>
+            <div
+              style={{
+                background: "#f8fafc",
+                borderRadius: 18,
+                padding: 20
+              }}
+            >
+              <div style={{ fontSize: 13, color: "#64748b", marginBottom: 8 }}>
+                Email
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#0f172a" }}>
+                {profile.email || "brak"}
               </div>
             </div>
           </div>
-
-          <div className="section-card">
-            <div className="section-head">
-              <h2 style={{ margin: 0 }}>Ostatnie odczyty</h2>
-              <Link href="/najemca/odczyty" className="helper-link">Zobacz wszystkie</Link>
-            </div>
-            <div className="item-list">
-              {latestReadings.length === 0 ? (
-                <div className="list-card">Brak odczytów dla tego mieszkania.</div>
-              ) : (
-                latestReadings.map((item) => (
-                  <div className="list-card" key={item.id}>
-                    <div className="icon-box">{item.utility_type === "cold_water" ? "💧" : item.utility_type === "hot_water" ? "♨️" : item.utility_type === "gas" ? "🔥" : "⚡"}</div>
-                    <div>
-                      <div style={{ fontWeight: 800, fontSize: 18 }}>{utilityLabel(item.utility_type)}: {item.value} {utilityUnit(item.utility_type)}</div>
-                      <div style={{ color: "#667081" }}>Data: {item.reading_date}</div>
-                    </div>
-                    <div style={{ fontWeight: 800, color: Number(item.usage ?? 0) > 0 ? "#1b6d2d" : "#667081" }}>
-                      {item.usage ?? 0} {utilityUnit(item.utility_type)}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="section-card">
-            <h2 style={{ marginTop: 0 }}>Analiza zużycia</h2>
-            <UsageChart />
-          </div>
         </div>
-      </main>
-
-      <MobileBottomNav />
-    </div>
+      </div>
+    </main>
   );
 }
