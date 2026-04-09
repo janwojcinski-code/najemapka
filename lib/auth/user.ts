@@ -28,8 +28,7 @@ function normalizeApartmentRelation(
 }
 
 export async function getCurrentUserProfile(): Promise<ProfileRow | null> {
-  const supabase = await createClient();
-
+const supabase = await createClient();
   const {
     data: { user }
   } = await supabase.auth.getUser();
