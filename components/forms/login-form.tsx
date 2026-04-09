@@ -51,7 +51,7 @@ export function LoginForm() {
     formState: { errors, isSubmitting }
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { email: "twoj@email.pl", password: "password123" }
+    defaultValues: { email: "", password: "" }
   });
 
   const onSubmit = async (values: FormValues) => {
@@ -63,7 +63,7 @@ export function LoginForm() {
     });
 
     if (signInError) {
-      setServerMessage("Nie udało się zalogować. Sprawdź dane lub konfigurację Supabase.");
+      setServerMessage(signInError.message || "Nie udało się zalogować.");
       return;
     }
 
@@ -73,7 +73,7 @@ export function LoginForm() {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      setServerMessage("Logowanie powiodło się, ale nie udało się pobrać danych użytkownika.");
+      setServerMessage(userError?.message || "Nie udało się pobrać danych użytkownika.");
       return;
     }
 
@@ -84,7 +84,7 @@ export function LoginForm() {
       .maybeSingle();
 
     if (profileError) {
-      setServerMessage("Nie udało się pobrać roli użytkownika z profilu.");
+      setServerMessage(`Błąd profilu: ${profileError.message}`);
       return;
     }
 
@@ -114,17 +114,38 @@ export function LoginForm() {
     <form className="form-grid" onSubmit={handleSubmit(onSubmit)}>
       <div className="field">
         <label className="label">Email</label>
-        <Input icon={<Mail size={18} color="#7d8596" />} placeholder="twoj@email.pl" error={errors.email?.message} {...register("email")} />
+        <Input
+          icon={<Mail size={18} color="#7d8596" />}
+          placeholder="twoj@email.pl"
+          error={errors.email?.message}
+          {...register("email")}
+        />
       </div>
 
       <div className="field">
         <div className="label-row">
           <label className="label">Hasło</label>
-          <Link href="/reset-hasla" className="helper-link">Przypomnij hasło</Link>
+          <Link href="/reset-hasla" className="helper-link">
+            Przypomnij hasło
+          </Link>
         </div>
         <Input
           icon={<Lock size={18} color="#7d8596" />}
-          rightSlot={<button type="button" onClick={() => setShowPassword((v) => !v)} style={{ border: 0, background: "transparent", display: "grid", placeItems: "center", cursor: "pointer" }}><Eye size={18} color="#7d8596" /></button>}
+          rightSlot={
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              style={{
+                border: 0,
+                background: "transparent",
+                display: "grid",
+                placeItems: "center",
+                cursor: "pointer"
+              }}
+            >
+              <Eye size={18} color="#7d8596" />
+            </button>
+          }
           type={showPassword ? "text" : "password"}
           placeholder="••••••••"
           error={errors.password?.message}
@@ -137,17 +158,6 @@ export function LoginForm() {
       <Button type="submit" disabled={isSubmitting}>
         Zaloguj się <ArrowRight size={18} />
       </Button>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
-        <div style={{ height: 1, background: "#dde4f0", flex: 1 }} />
-        <span style={{ fontSize: 12, letterSpacing: "0.1em", color: "#8a93a3", fontWeight: 800 }}>WERYFIKACJA</span>
-        <div style={{ height: 1, background: "#dde4f0", flex: 1 }} />
-      </div>
-
-      <div className="info-box">
-        <span>ⓘ</span>
-        <span>Masz problem z dostępem? Twój administrator może zresetować uprawnienia w panelu zarządzania nieruchomością.</span>
-      </div>
     </form>
   );
 }
