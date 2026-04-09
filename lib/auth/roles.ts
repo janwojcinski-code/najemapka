@@ -1,24 +1,14 @@
-import type { UserRole } from "@/types";
+export type AppRole = "admin" | "tenant";
 
-export const AUTH_ROUTES = ["/logowanie", "/rejestracja", "/reset-hasla"];
-
-export const DEFAULT_AFTER_LOGIN: Record<UserRole, string> = {
-  admin: "/admin/dashboard",
-  tenant: "/najemca/dashboard"
-};
-
-export function getRedirectPathForRole(role: UserRole) {
-  return DEFAULT_AFTER_LOGIN[role];
+export function isAdmin(role: string): role is "admin" {
+  return role === "admin";
 }
 
-export function isAuthRoute(pathname: string) {
-  return AUTH_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+export function isTenant(role: string): role is "tenant" {
+  return role === "tenant";
 }
 
-export function isAdminRoute(pathname: string) {
-  return pathname === "/admin" || pathname.startsWith("/admin/");
-}
-
-export function isTenantRoute(pathname: string) {
-  return pathname === "/najemca" || pathname.startsWith("/najemca/");
+export function getDashboardPath(role: AppRole): string {
+  if (role === "admin") return "/admin/dashboard";
+  return "/najemca/dashboard";
 }
