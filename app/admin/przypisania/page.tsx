@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuthenticatedProfile } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
+import AdminTopbar from "@/components/admin-topbar";
 
 async function endAssignment(formData: FormData) {
   "use server";
@@ -72,6 +73,8 @@ export default async function AdminAssignmentsPage({
 
   return (
     <main style={{ padding: "2rem", maxWidth: "1100px", margin: "0 auto" }}>
+      <AdminTopbar />
+
       <div
         style={{
           display: "flex",
