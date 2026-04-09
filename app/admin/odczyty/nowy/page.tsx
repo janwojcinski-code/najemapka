@@ -236,7 +236,7 @@ function ReadingField({
             color: "#667085",
           }}
         >
-          Poprzedni odczyt: {previousValue}
+          Poprzedni odczyt:: {previousValue}
         </div>
       )}
       <input
