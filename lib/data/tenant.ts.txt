@@ -1,3 +1,28 @@
+import { createClient } from "@/lib/supabase/server";
+
+export type TenantDashboardData = {
+  assignment: {
+    id: string;
+    apartment_id: string;
+    apartment_name: string;
+    apartment_address: string;
+  } | null;
+  recentReadings: {
+    id: string;
+    type: string;
+    value: number;
+    unit: string;
+    read_at: string;
+  }[];
+  recentSettlements: {
+    id: string;
+    amount: number;
+    status: string;
+    period_start: string;
+    period_end: string;
+  }[];
+};
+
 export async function getTenantDashboardData(
   tenantId: string
 ): Promise<TenantDashboardData> {
@@ -16,8 +41,8 @@ export async function getTenantDashboardData(
       )
     `
     )
-    .eq("tenant_user_id", tenantId)   // <-- poprawka
-    .is("end_date", null)             // <-- poprawka: aktywne = bez end_date
+    .eq("tenant_user_id", tenantId)
+    .is("end_date", null)
     .single();
 
   if (!assignment) {
@@ -45,8 +70,8 @@ export async function getTenantDashboardData(
 
   return {
     assignment: {
-      id: assignment.id,
-      apartment_id: assignment.apartment_id,
+      id: String(assignment.id),
+      apartment_id: String(assignment.apartment_id),
       apartment_name: apt?.name ?? "Brak nazwy",
       apartment_address: apt?.address ?? "Brak adresu",
     },
