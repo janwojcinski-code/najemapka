@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuthenticatedProfile } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
+import AdminTopbar from "@/components/admin-topbar";
 
 export default async function AdminTariffsPage() {
   try {
@@ -19,6 +20,8 @@ export default async function AdminTariffsPage() {
 
   return (
     <main style={{ padding: "2rem", maxWidth: "1100px", margin: "0 auto" }}>
+      <AdminTopbar />
+
       <div
         style={{
           display: "flex",
