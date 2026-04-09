@@ -46,6 +46,23 @@ export default async function AdminDashboardPage() {
         />
       </div>
 
+      <div style={{ marginBottom: "24px" }}>
+        <a
+          href="/admin/mieszkania"
+          style={{
+            display: "inline-block",
+            background: "#0B5CAD",
+            color: "white",
+            textDecoration: "none",
+            padding: "12px 18px",
+            borderRadius: "999px",
+            fontWeight: 600,
+          }}
+        >
+          Przejdź do mieszkań
+        </a>
+      </div>
+
       {data.recentApartments.length > 0 && (
         <section>
           <h2
