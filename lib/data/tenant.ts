@@ -9,17 +9,18 @@ export type TenantDashboardData = {
   } | null;
   recentReadings: {
     id: string;
-    type: string;
-    value: number;
-    unit: string;
-    read_at: string;
+    reading_date: string;
+    cold_water: number | null;
+    hot_water: number | null;
+    electricity: number | null;
+    gas: number | null;
   }[];
   recentSettlements: {
     id: string;
-    amount: number;
+    total_amount: number;
     status: string;
-    period_start: string;
-    period_end: string;
+    month: number;
+    year: number;
   }[];
 };
 
@@ -30,17 +31,7 @@ export async function getTenantDashboardData(
 
   const { data: assignment } = await supabase
     .from("tenant_assignments")
-    .select(
-      `
-      id,
-      apartment_id,
-      apartments (
-        id,
-        name,
-        address
-      )
-    `
-    )
+    .select(`id, apartment_id, apartments ( id, name, address )`)
     .eq("tenant_user_id", tenantId)
     .is("end_date", null)
     .single();
@@ -56,15 +47,16 @@ export async function getTenantDashboardData(
   const [readingsRes, settlementsRes] = await Promise.all([
     supabase
       .from("meter_readings")
-      .select("id, type, value, unit, read_at")
+      .select("id, reading_date, cold_water, hot_water, electricity, gas")
       .eq("apartment_id", assignment.apartment_id)
-      .order("read_at", { ascending: false })
+      .order("reading_date", { ascending: false })
       .limit(5),
     supabase
       .from("settlements")
-      .select("id, amount, status, period_start, period_end")
+      .select("id, total_amount, status, month, year")
       .eq("apartment_id", assignment.apartment_id)
-      .order("period_start", { ascending: false })
+      .order("year", { ascending: false })
+      .order("month", { ascending: false })
       .limit(5),
   ]);
 
