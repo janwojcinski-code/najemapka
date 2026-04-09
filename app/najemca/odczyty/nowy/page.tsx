@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAuthenticatedProfile } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
+import TenantTopbar from "@/components/tenant-topbar";
 
 async function saveReading(formData: FormData) {
   "use server";
@@ -98,6 +99,8 @@ export default async function NewReadingPage({
 
   return (
     <main style={{ padding: "2rem", maxWidth: "760px", margin: "0 auto" }}>
+      <TenantTopbar />
+
       <h1 style={{ fontSize: "32px", fontWeight: 700, marginBottom: "8px" }}>
         Dodaj odczyt liczników
       </h1>
@@ -236,7 +239,7 @@ function ReadingField({
             color: "#667085",
           }}
         >
-          Poprzedni odczyt:: {previousValue}
+          Poprzedni odczyt: {previousValue}
         </div>
       )}
       <input
