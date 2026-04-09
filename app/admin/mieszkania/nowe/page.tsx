@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAuthenticatedProfile } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
+import AdminTopbar from "@/components/admin-topbar";
 
 async function createApartment(formData: FormData) {
   "use server";
@@ -49,6 +50,8 @@ export default async function NewApartmentPage({
 
   return (
     <main style={{ padding: "2rem", maxWidth: "760px", margin: "0 auto" }}>
+      <AdminTopbar />
+
       <h1 style={{ fontSize: "32px", fontWeight: 700, marginBottom: "8px" }}>
         Dodaj mieszkanie
       </h1>
