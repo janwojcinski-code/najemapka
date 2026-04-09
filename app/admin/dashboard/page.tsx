@@ -21,7 +21,6 @@ export default async function AdminDashboardPage() {
         Witaj, {profile.full_name || profile.email}
       </p>
 
-      {/* Statystyki */}
       <div
         style={{
           display: "grid",
@@ -47,7 +46,6 @@ export default async function AdminDashboardPage() {
         />
       </div>
 
-      {/* Lista mieszkań */}
       {data.recentApartments.length > 0 && (
         <section>
           <h2
@@ -82,13 +80,7 @@ export default async function AdminDashboardPage() {
                 }}
               >
                 <div>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontWeight: 500,
-                      fontSize: "14px",
-                    }}
-                  >
+                  <p style={{ margin: 0, fontWeight: 500, fontSize: "14px" }}>
                     {apt.name || apt.address}
                   </p>
                   {apt.name && (
