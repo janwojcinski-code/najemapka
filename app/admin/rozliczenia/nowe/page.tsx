@@ -11,231 +11,62 @@ async function createSettlement(formData: FormData) {
   const month = Number(formData.get("month"));
   const year = Number(formData.get("year"));
 
-  if (!apartmentId || !month || !year) {
-    redirect("/admin/rozliczenia/nowe?error=missing_fields");
-  }
-
   const { data: readings } = await supabase
     .from("meter_readings")
-    .select("reading_date, cold_water, hot_water, electricity, gas")
+    .select("*")
     .eq("apartment_id", apartmentId)
     .order("reading_date", { ascending: false })
     .limit(2);
 
   if (!readings || readings.length < 2) {
-    redirect("/admin/rozliczenia/nowe?error=not_enough_readings");
+    redirect("/admin/rozliczenia/nowe");
   }
 
   const latest = readings[0];
-  const previous = readings[1];
+  const prev = readings[1];
 
-  const coldDiff = Math.max((latest.cold_water ?? 0) - (previous.cold_water ?? 0), 0);
-  const hotDiff = Math.max((latest.hot_water ?? 0) - (previous.hot_water ?? 0), 0);
-  const electricityDiff = Math.max((latest.electricity ?? 0) - (previous.electricity ?? 0), 0);
-  const gasDiff = Math.max((latest.gas ?? 0) - (previous.gas ?? 0), 0);
+  const diff =
+    (latest.cold_water ?? 0) - (prev.cold_water ?? 0) +
+    (latest.hot_water ?? 0) - (prev.hot_water ?? 0) +
+    (latest.electricity ?? 0) - (prev.electricity ?? 0) +
+    (latest.gas ?? 0) - (prev.gas ?? 0);
 
-  const { data: prices } = await supabase
-    .from("utility_prices")
-    .select("utility_type, price, price_gross, effective_from")
-    .lte("effective_from", `${year}-${String(month).padStart(2, "0")}-31`)
-    .order("effective_from", { ascending: false });
-
-  const getPrice = (type: string) => {
-    const found = prices?.find((p: any) => p.utility_type === type);
-    return Number(found?.price_gross ?? found?.price ?? 0);
-  };
-
-  const total =
-    coldDiff * getPrice("cold_water") +
-    hotDiff * getPrice("hot_water") +
-    electricityDiff * getPrice("electricity") +
-    gasDiff * getPrice("gas");
-
-  const { error } = await supabase.from("settlements").insert({
+  await supabase.from("settlements").insert({
     apartment_id: apartmentId,
     month,
     year,
-    total_amount: Number(total.toFixed(2)),
+    total_amount: diff,
     status: "pending",
   });
-
-  if (error) {
-    redirect("/admin/rozliczenia/nowe?error=save_failed");
-  }
 
   redirect("/admin/rozliczenia");
 }
 
-export default async function NewSettlementPage({
-  searchParams,
-}: {
-  searchParams?: Promise<{ error?: string }>;
-}) {
-  try {
-    await requireAuthenticatedProfile(["admin"]);
-  } catch {
-    redirect("/logowanie");
-  }
+export default async function Page() {
+  await requireAuthenticatedProfile(["admin"]);
 
   const supabase = await createClient();
 
   const { data: apartments } = await supabase
     .from("apartments")
-    .select("id, name, address, is_active")
-    .eq("is_active", true)
-    .order("id", { ascending: false });
-
-  const params = (await searchParams) || {};
-  const error =
-    params.error === "missing_fields"
-      ? "Uzupełnij wszystkie pola."
-      : params.error === "not_enough_readings"
-      ? "Potrzebne są co najmniej 2 odczyty dla tego mieszkania."
-      : params.error === "save_failed"
-      ? "Nie udało się zapisać rozliczenia."
-      : null;
-
-  const now = new Date();
+    .select("id, name");
 
   return (
-    <main style={{ padding: "2rem", maxWidth: "760px", margin: "0 auto" }}>
-      <h1 style={{ fontSize: "32px", fontWeight: 700, marginBottom: "8px" }}>
-        Generuj rozliczenie
-      </h1>
-      <p style={{ margin: "0 0 24px", color: "#667085" }}>
-        System policzy zużycie na podstawie 2 ostatnich odczytów i aktualnych taryf.
-      </p>
+    <form action={createSettlement} style={{ padding: "2rem" }}>
+      <h1>Nowe rozliczenie</h1>
 
-      <form
-        action={createSettlement}
-        style={{
-          background: "white",
-          border: "1px solid #E5E7EB",
-          borderRadius: "20px",
-          padding: "24px",
-        }}
-      >
-        {error && (
-          <div
-            style={{
-              marginBottom: "16px",
-              padding: "12px 14px",
-              borderRadius: "12px",
-              background: "#FEF2F2",
-              color: "#B91C1C",
-              border: "1px solid #FECACA",
-            }}
-          >
-            {error}
-          </div>
-        )}
+      <select name="apartment_id">
+        {apartments?.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.name}
+          </option>
+        ))}
+      </select>
 
-        <div style={{ marginBottom: "16px" }}>
-          <label
-            htmlFor="apartment_id"
-            style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}
-          >
-            Mieszkanie
-          </label>
-          <select
-            id="apartment_id"
-            name="apartment_id"
-            defaultValue=""
-            style={{
-              width: "100%",
-              padding: "12px 14px",
-              borderRadius: "12px",
-              border: "1px solid #D0D5DD",
-            }}
-          >
-            <option value="" disabled>
-              Wybierz mieszkanie
-            </option>
-            {(apartments ?? []).map((apartment) => (
-              <option key={apartment.id} value={apartment.id}>
-                {apartment.name || `Mieszkanie ${apartment.id}`} — {apartment.address}
-              </option>
-            ))}
-          </select>
-        </div>
+      <input name="month" type="number" placeholder="Miesiąc" />
+      <input name="year" type="number" placeholder="Rok" />
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "24px" }}>
-          <div>
-            <label
-              htmlFor="month"
-              style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}
-            >
-              Miesiąc
-            </label>
-            <input
-              id="month"
-              name="month"
-              type="number"
-              min="1"
-              max="12"
-              defaultValue={now.getMonth() + 1}
-              style={{
-                width: "100%",
-                padding: "12px 14px",
-                borderRadius: "12px",
-                border: "1px solid #D0D5DD",
-              }}
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="year"
-              style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}
-            >
-              Rok
-            </label>
-            <input
-              id="year"
-              name="year"
-              type="number"
-              defaultValue={now.getFullYear()}
-              style={{
-                width: "100%",
-                padding: "12px 14px",
-                borderRadius: "12px",
-                border: "1px solid #D0D5DD",
-              }}
-            />
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: "12px" }}>
-          <button
-            type="submit"
-            style={{
-              background: "#0B5CAD",
-              color: "white",
-              border: "none",
-              borderRadius: "999px",
-              padding: "12px 18px",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Wygeneruj rozliczenie
-          </button>
-
-          <a
-            href="/admin/rozliczenia"
-            style={{
-              textDecoration: "none",
-              border: "1px solid #D0D5DD",
-              borderRadius: "999px",
-              padding: "12px 18px",
-              color: "#344054",
-              fontWeight: 600,
-            }}
-          >
-            Anuluj
-          </a>
-        </div>
-      </form>
-    </main>
+      <button type="submit">Generuj</button>
+    </form>
   );
 }
