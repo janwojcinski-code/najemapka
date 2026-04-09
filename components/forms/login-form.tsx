@@ -44,7 +44,6 @@ export default function LoginForm({
       return;
     }
 
-    // Pobierz profil po zalogowaniu
     const {
       data: { user },
     } = await supabase.auth.getUser();
