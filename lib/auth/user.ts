@@ -7,13 +7,25 @@ type ProfileRow = Pick<Profile, "id" | "full_name" | "role" | "apartment_id" | "
   email?: string | null;
 };
 
+type ApartmentRelation = Pick<Apartment, "id" | "name" | "code">;
+
 type ReadingWithApartment = MeterReading & {
-  apartments?: Pick<Apartment, "id" | "name" | "code"> | null;
+  apartments?: ApartmentRelation | ApartmentRelation[] | null;
 };
 
-type SettlementWithApartment = Settlement & {
-  apartments?: Pick<Apartment, "id" | "name" | "code"> | null;
-};
+function normalizeApartmentRelation(
+  apartments: ApartmentRelation | ApartmentRelation[] | null | undefined
+): ApartmentRelation | null {
+  if (!apartments) {
+    return null;
+  }
+
+  if (Array.isArray(apartments)) {
+    return apartments[0] ?? null;
+  }
+
+  return apartments;
+}
 
 export async function getCurrentUserProfile(): Promise<ProfileRow | null> {
   const supabase = await createClient();
@@ -32,7 +44,7 @@ export async function getCurrentUserProfile(): Promise<ProfileRow | null> {
     .eq("id", user.id)
     .maybeSingle();
 
-  return profile as ProfileRow | null;
+  return (profile as ProfileRow | null) ?? null;
 }
 
 export async function requireAuthenticatedProfile(allowedRole?: UserRole) {
@@ -59,36 +71,68 @@ export async function getAdminDashboardData() {
   const [
     apartmentsResponse,
     readingsResponse,
-    settlementsResponse,
     pendingSettlementsResponse,
     currentMonthSettlementsResponse,
     latestReadingsResponse
   ] = await Promise.all([
-    supabase.from("apartments").select("id, code, name, address, city, area_m2").order("created_at", { ascending: false }),
-    supabase.from("meter_readings").select("id, status, reading_date"),
-    supabase.from("settlements").select("id, status, total_amount, issue_date"),
-    supabase.from("settlements").select("id").eq("status", "draft"),
+    supabase
+      .from("apartments")
+      .select("id, code, name, address, city, area_m2")
+      .order("created_at", { ascending: false }),
+
+    supabase
+      .from("meter_readings")
+      .select("id, status, reading_date"),
+
+    supabase
+      .from("settlements")
+      .select("id")
+      .eq("status", "draft"),
+
     supabase
       .from("settlements")
       .select("id, total_amount")
-      .gte("period_month", new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10))
-      .lt("period_month", new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().slice(0, 10)),
+      .gte(
+        "period_month",
+        new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+          .toISOString()
+          .slice(0, 10)
+      )
+      .lt(
+        "period_month",
+        new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1)
+          .toISOString()
+          .slice(0, 10)
+      ),
+
     supabase
       .from("meter_readings")
-      .select("id, apartment_id, reading_date, utility_type, value, previous_value, usage, photo_path, created_by, status, apartments(id, name, code)")
+      .select(
+        "id, apartment_id, reading_date, utility_type, value, previous_value, usage, photo_path, created_by, status, apartments(id, name, code)"
+      )
       .order("reading_date", { ascending: false })
       .limit(6)
   ]);
 
-  const apartments = (apartmentsResponse.data ?? []) as Apartment[];
-  const readings = (readingsResponse.data ?? []) as Pick<MeterReading, "id" | "status" | "reading_date">[];
-  const settlements = (settlementsResponse.data ?? []) as Pick<Settlement, "id" | "status" | "total_amount" | "issue_date">[];
+  const apartments = ((apartmentsResponse.data ?? []) as Apartment[]) ?? [];
+  const readings =
+    ((readingsResponse.data ?? []) as Pick<MeterReading, "id" | "status" | "reading_date">[]) ?? [];
   const pendingSettlements = pendingSettlementsResponse.data ?? [];
-  const currentMonthSettlements = (currentMonthSettlementsResponse.data ?? []) as Pick<Settlement, "id" | "total_amount">[];
-  const latestReadings = (latestReadingsResponse.data ?? []) as ReadingWithApartment[];
+  const currentMonthSettlements =
+    ((currentMonthSettlementsResponse.data ?? []) as Pick<Settlement, "id" | "total_amount">[]) ?? [];
+
+  const latestReadingsRaw = ((latestReadingsResponse.data ?? []) as ReadingWithApartment[]) ?? [];
+
+  const latestReadings = latestReadingsRaw.map((reading) => ({
+    ...reading,
+    apartments: normalizeApartmentRelation(reading.apartments)
+  }));
 
   const missingReadingsCount = readings.filter((item) => item.status === "submitted").length;
-  const totalCurrentMonthCost = currentMonthSettlements.reduce((sum, item) => sum + Number(item.total_amount ?? 0), 0);
+  const totalCurrentMonthCost = currentMonthSettlements.reduce(
+    (sum, item) => sum + Number(item.total_amount ?? 0),
+    0
+  );
 
   return {
     apartments,
@@ -121,12 +165,14 @@ export async function getTenantDashboardData(profile: ProfileRow) {
       .select("id, code, name, address, city, area_m2")
       .eq("id", profile.apartment_id)
       .maybeSingle(),
+
     supabase
       .from("meter_readings")
       .select("id, apartment_id, reading_date, utility_type, value, previous_value, usage, photo_path, created_by, status")
       .eq("apartment_id", profile.apartment_id)
       .order("reading_date", { ascending: false })
       .limit(4),
+
     supabase
       .from("settlements")
       .select("id, apartment_id, period_month, total_amount, status, issue_date")
@@ -135,9 +181,9 @@ export async function getTenantDashboardData(profile: ProfileRow) {
       .limit(3)
   ]);
 
-  const apartment = (apartmentResponse.data ?? null) as Apartment | null;
-  const latestReadings = (readingsResponse.data ?? []) as MeterReading[];
-  const latestSettlements = (settlementsResponse.data ?? []) as Settlement[];
+  const apartment = (apartmentResponse.data as Apartment | null) ?? null;
+  const latestReadings = ((readingsResponse.data ?? []) as MeterReading[]) ?? [];
+  const latestSettlements = ((settlementsResponse.data ?? []) as Settlement[]) ?? [];
 
   return {
     apartment,
