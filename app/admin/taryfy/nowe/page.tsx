@@ -11,18 +11,21 @@ async function createTariff(formData: FormData) {
   const utilityType = String(formData.get("utility_type") || "").trim();
   const priceRaw = String(formData.get("price") || "").trim();
   const effectiveFrom = String(formData.get("effective_from") || "").trim();
+  const apartmentIdRaw = String(formData.get("apartment_id") || "").trim();
 
   if (!utilityType || !priceRaw || !effectiveFrom) {
     redirect("/admin/taryfy/nowe?error=missing_fields");
   }
 
   const price = Number(priceRaw);
+  const apartment_id = apartmentIdRaw ? Number(apartmentIdRaw) : null;
 
   const { error } = await supabase.from("utility_prices").insert({
     utility_type: utilityType,
     price,
     price_gross: price,
     effective_from: effectiveFrom,
+    apartment_id,
   });
 
   if (error) {
@@ -43,6 +46,13 @@ export default async function NewTariffPage({
     redirect("/logowanie");
   }
 
+  const supabase = await createClient();
+
+  const { data: apartments } = await supabase
+    .from("apartments")
+    .select("id, name, address")
+    .order("id", { ascending: false });
+
   const params = (await searchParams) || {};
   const error =
     params.error === "missing_fields"
@@ -59,7 +69,7 @@ export default async function NewTariffPage({
         Dodaj taryfę
       </h1>
       <p style={{ margin: "0 0 24px", color: "#667085" }}>
-        Dodaj nową stawkę dla wybranego medium.
+        Dodaj stawkę globalną albo przypisaną do konkretnego mieszkania.
       </p>
 
       <form
@@ -111,6 +121,35 @@ export default async function NewTariffPage({
             <option value="hot_water">Ciepła woda</option>
             <option value="electricity">Prąd</option>
             <option value="gas">Gaz</option>
+          </select>
+        </div>
+
+        <div style={{ marginBottom: "16px" }}>
+          <label
+            htmlFor="apartment_id"
+            style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}
+          >
+            Mieszkanie
+          </label>
+          <select
+            id="apartment_id"
+            name="apartment_id"
+            defaultValue=""
+            style={{
+              width: "100%",
+              padding: "12px 14px",
+              borderRadius: "12px",
+              border: "1px solid #D0D5DD",
+            }}
+          >
+            <option value="">
+              Globalna taryfa (dla wszystkich mieszkań)
+            </option>
+            {(apartments ?? []).map((apartment) => (
+              <option key={apartment.id} value={apartment.id}>
+                {apartment.name || `Mieszkanie ${apartment.id}`} — {apartment.address}
+              </option>
+            ))}
           </select>
         </div>
 
