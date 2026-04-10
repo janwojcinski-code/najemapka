@@ -24,6 +24,36 @@ async function saveReading(formData: FormData) {
   const electricity = electricityRaw ? Number(electricityRaw) : null;
   const gas = gasRaw ? Number(gasRaw) : null;
 
+  const { data: lastReading } = await supabase
+    .from("meter_readings")
+    .select("cold_water, hot_water, electricity, gas")
+    .eq("apartment_id", apartmentId)
+    .order("reading_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const invalid =
+    (cold_water !== null &&
+      lastReading?.cold_water !== null &&
+      lastReading?.cold_water !== undefined &&
+      cold_water < lastReading.cold_water) ||
+    (hot_water !== null &&
+      lastReading?.hot_water !== null &&
+      lastReading?.hot_water !== undefined &&
+      hot_water < lastReading.hot_water) ||
+    (electricity !== null &&
+      lastReading?.electricity !== null &&
+      lastReading?.electricity !== undefined &&
+      electricity < lastReading.electricity) ||
+    (gas !== null &&
+      lastReading?.gas !== null &&
+      lastReading?.gas !== undefined &&
+      gas < lastReading.gas);
+
+  if (invalid) {
+    redirect("/najemca/odczyty/nowy?error=lower_than_previous");
+  }
+
   const { error } = await supabase.from("meter_readings").insert({
     apartment_id: apartmentId,
     reading_date: readingDate,
@@ -37,7 +67,7 @@ async function saveReading(formData: FormData) {
     redirect("/najemca/odczyty/nowy?error=save_failed");
   }
 
-  redirect("/najemca/dashboard");
+  redirect("/najemca/odczyty");
 }
 
 export default async function NewReadingPage({
@@ -91,6 +121,8 @@ export default async function NewReadingPage({
   const error =
     params.error === "missing_fields"
       ? "Uzupełnij wymagane pola."
+      : params.error === "lower_than_previous"
+      ? "Nowy odczyt nie może być mniejszy od poprzedniego."
       : params.error === "save_failed"
       ? "Nie udało się zapisać odczytu."
       : null;
@@ -196,7 +228,7 @@ export default async function NewReadingPage({
           </button>
 
           <a
-            href="/najemca/dashboard"
+            href="/najemca/odczyty"
             style={{
               textDecoration: "none",
               border: "1px solid #D0D5DD",
