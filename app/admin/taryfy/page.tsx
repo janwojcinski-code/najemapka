@@ -25,7 +25,7 @@ export default async function AdminTariffsPage() {
       )
     `
     )
-    .order("effective_from", { ascending: false });
+    .order("valid_from", { ascending: false });
 
   return (
     <main style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
@@ -74,7 +74,7 @@ export default async function AdminTariffsPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "160px 220px 180px 180px 1fr 120px",
+            gridTemplateColumns: "160px 220px 150px 140px 140px 1fr 120px",
             gap: "16px",
             padding: "16px 20px",
             borderBottom: "1px solid #E5E7EB",
@@ -85,8 +85,9 @@ export default async function AdminTariffsPage() {
         >
           <div>Medium</div>
           <div>Zakres</div>
-          <div>Stawka</div>
-          <div>Obowiązuje od</div>
+          <div>Cena/jedn.</div>
+          <div>Opłata stała</div>
+          <div>Od kiedy</div>
           <div>Status</div>
           <div>Akcja</div>
         </div>
@@ -106,7 +107,7 @@ export default async function AdminTariffsPage() {
                 key={tariff.id}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "160px 220px 180px 180px 1fr 120px",
+                  gridTemplateColumns: "160px 220px 150px 140px 140px 1fr 120px",
                   gap: "16px",
                   padding: "16px 20px",
                   borderBottom: "1px solid #F1F5F9",
@@ -119,8 +120,9 @@ export default async function AdminTariffsPage() {
                     ? `${apartment.name || "—"} — ${apartment.address || "—"}`
                     : "Globalna"}
                 </div>
-                <div>{tariff.price_gross ?? tariff.price ?? "—"}</div>
-                <div>{tariff.effective_from || "—"}</div>
+                <div>{Number(tariff.price_per_unit ?? 0).toFixed(4)}</div>
+                <div>{Number(tariff.fixed_fee ?? 0).toFixed(2)}</div>
+                <div>{tariff.valid_from || "—"}</div>
                 <div>
                   <span
                     style={{
