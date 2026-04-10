@@ -76,6 +76,10 @@ export default async function ApartmentDetailsPage({
       : activeAssignment.profiles
     : null;
 
+  const safeTariffs = tariffs ?? [];
+  const safeReadings = readings ?? [];
+  const safeSettlements = settlements ?? [];
+
   return (
     <main style={{ padding: "2rem", maxWidth: "1000px", margin: "0 auto" }}>
       <AdminTopbar />
@@ -114,10 +118,10 @@ export default async function ApartmentDetailsPage({
       </div>
 
       <Section title="Aktywne taryfy">
-        {(tariffs ?? []).length === 0 ? (
+        {safeTariffs.length === 0 ? (
           <EmptyText text="Brak taryf globalnych i przypisanych do mieszkania." />
         ) : (
-          tariffs.map((tariff: any) => {
+          safeTariffs.map((tariff: any) => {
             const scope =
               tariff.apartment_id === apartment.id ? "Per mieszkanie" : "Globalna";
 
@@ -147,10 +151,10 @@ export default async function ApartmentDetailsPage({
       </Section>
 
       <Section title="Ostatnie odczyty">
-        {(readings ?? []).length === 0 ? (
+        {safeReadings.length === 0 ? (
           <EmptyText text="Brak odczytów." />
         ) : (
-          readings.map((r: any) => (
+          safeReadings.map((r: any) => (
             <Row
               key={r.id}
               left={
@@ -169,10 +173,10 @@ export default async function ApartmentDetailsPage({
       </Section>
 
       <Section title="Ostatnie rozliczenia">
-        {(settlements ?? []).length === 0 ? (
+        {safeSettlements.length === 0 ? (
           <EmptyText text="Brak rozliczeń." />
         ) : (
-          settlements.map((s: any) => (
+          safeSettlements.map((s: any) => (
             <Row
               key={s.id}
               left={
