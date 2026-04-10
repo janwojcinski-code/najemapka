@@ -150,7 +150,7 @@ export default async function NewReadingPage({
         }}
       >
         <input type="hidden" name="apartment_id" value={assignment.apartment_id} />
-
+<input type="file" name="photo" accept="image/*" />
         {error && (
           <div
             style={{
