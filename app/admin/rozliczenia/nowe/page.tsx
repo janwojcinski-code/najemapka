@@ -1,32 +1,95 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuthenticatedProfile } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
 import AdminTopbar from "@/components/admin-topbar";
 
-async function markSettlementPaid(formData: FormData) {
+async function createSettlement(formData: FormData) {
   "use server";
 
   const supabase = await createClient();
-  const id = Number(formData.get("id"));
 
-  if (!id) {
-    redirect("/admin/rozliczenia");
+  const apartmentId = Number(formData.get("apartment_id"));
+  const month = Number(formData.get("month"));
+  const year = Number(formData.get("year"));
+
+  if (!apartmentId || !month || !year) {
+    redirect("/admin/rozliczenia/nowe?error=missing_fields");
   }
 
-  const { error } = await supabase
+  const { data: existingSettlement } = await supabase
     .from("settlements")
-    .update({ status: "paid" })
-    .eq("id", id);
+    .select("id")
+    .eq("apartment_id", apartmentId)
+    .eq("month", month)
+    .eq("year", year)
+    .maybeSingle();
+
+  if (existingSettlement) {
+    redirect("/admin/rozliczenia/nowe?error=duplicate_settlement");
+  }
+
+  const { data: readings } = await supabase
+    .from("meter_readings")
+    .select("reading_date, cold_water, hot_water, electricity, gas")
+    .eq("apartment_id", apartmentId)
+    .order("reading_date", { ascending: false })
+    .limit(2);
+
+  if (!readings || readings.length < 2) {
+    redirect("/admin/rozliczenia/nowe?error=not_enough_readings");
+  }
+
+  const latest = readings[0];
+  const previous = readings[1];
+
+  const coldDiff = Math.max((latest.cold_water ?? 0) - (previous.cold_water ?? 0), 0);
+  const hotDiff = Math.max((latest.hot_water ?? 0) - (previous.hot_water ?? 0), 0);
+  const electricityDiff = Math.max((latest.electricity ?? 0) - (previous.electricity ?? 0), 0);
+  const gasDiff = Math.max((latest.gas ?? 0) - (previous.gas ?? 0), 0);
+
+  const { data: prices } = await supabase
+    .from("utility_prices")
+    .select("utility_type, price, price_gross, effective_from")
+    .lte("effective_from", `${year}-${String(month).padStart(2, "0")}-31`)
+    .order("effective_from", { ascending: false });
+
+  const getPrice = (type: string) => {
+    const found = prices?.find((p: any) => p.utility_type === type);
+    return Number(found?.price_gross ?? found?.price ?? 0);
+  };
+
+  const coldPrice = getPrice("cold_water");
+  const hotPrice = getPrice("hot_water");
+  const electricityPrice = getPrice("electricity");
+  const gasPrice = getPrice("gas");
+
+  const coldCost = coldDiff * coldPrice;
+  const hotCost = hotDiff * hotPrice;
+  const electricityCost = electricityDiff * electricityPrice;
+  const gasCost = gasDiff * gasPrice;
+
+  const total =
+    coldCost +
+    hotCost +
+    electricityCost +
+    gasCost;
+
+  const { error } = await supabase.from("settlements").insert({
+    apartment_id: apartmentId,
+    month,
+    year,
+    total_amount: Number(total.toFixed(2)),
+    status: "pending",
+  });
 
   if (error) {
-    redirect("/admin/rozliczenia?error=mark_paid_failed");
+    redirect("/admin/rozliczenia/nowe?error=save_failed");
   }
 
   redirect("/admin/rozliczenia");
 }
 
-export default async function AdminSettlementsPage({
+export default async function NewSettlementPage({
   searchParams,
 }: {
   searchParams?: Promise<{ error?: string }>;
@@ -39,198 +102,174 @@ export default async function AdminSettlementsPage({
 
   const supabase = await createClient();
 
-  const { data: settlements } = await supabase
-    .from("settlements")
-    .select(
-      `
-      id,
-      apartment_id,
-      month,
-      year,
-      total_amount,
-      status,
-      apartments (
-        id,
-        name,
-        address
-      )
-    `
-    )
-    .order("year", { ascending: false })
-    .order("month", { ascending: false });
+  const { data: apartments } = await supabase
+    .from("apartments")
+    .select("id, name, address, is_active")
+    .eq("is_active", true)
+    .order("id", { ascending: false });
 
   const params = (await searchParams) || {};
   const error =
-    params.error === "mark_paid_failed"
-      ? "Nie udało się oznaczyć rozliczenia jako opłacone."
+    params.error === "missing_fields"
+      ? "Uzupełnij wszystkie pola."
+      : params.error === "duplicate_settlement"
+      ? "Rozliczenie dla tego mieszkania i miesiąca już istnieje."
+      : params.error === "not_enough_readings"
+      ? "Potrzebne są co najmniej 2 odczyty dla tego mieszkania."
+      : params.error === "save_failed"
+      ? "Nie udało się zapisać rozliczenia."
       : null;
 
+  const now = new Date();
+
   return (
-    <main style={{ padding: "2rem", maxWidth: "1100px", margin: "0 auto" }}>
+    <main style={{ padding: "2rem", maxWidth: "760px", margin: "0 auto" }}>
       <AdminTopbar />
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1.5rem",
-        }}
-      >
-        <div>
-          <h1 style={{ fontSize: "32px", fontWeight: 700, margin: "0 0 8px" }}>
-            Rozliczenia
-          </h1>
-          <p style={{ margin: 0, color: "#667085" }}>
-            Zarządzaj rozliczeniami mieszkań.
-          </p>
-        </div>
+      <h1 style={{ fontSize: "32px", fontWeight: 700, marginBottom: "8px" }}>
+        Generuj rozliczenie
+      </h1>
+      <p style={{ margin: "0 0 24px", color: "#667085" }}>
+        System policzy zużycie na podstawie 2 ostatnich odczytów i aktualnych taryf.
+      </p>
 
-        <Link
-          href="/admin/rozliczenia/nowe"
-          style={{
-            background: "#0B5CAD",
-            color: "white",
-            textDecoration: "none",
-            padding: "12px 18px",
-            borderRadius: "999px",
-            fontWeight: 600,
-          }}
-        >
-          + Generuj rozliczenie
-        </Link>
-      </div>
-
-      {error && (
-        <div
-          style={{
-            marginBottom: "16px",
-            padding: "12px 14px",
-            borderRadius: "12px",
-            background: "#FEF2F2",
-            color: "#B91C1C",
-            border: "1px solid #FECACA",
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      <div
+      <form
+        action={createSettlement}
         style={{
           background: "white",
           border: "1px solid #E5E7EB",
           borderRadius: "20px",
-          overflow: "hidden",
+          padding: "24px",
         }}
       >
+        {error && (
+          <div
+            style={{
+              marginBottom: "16px",
+              padding: "12px 14px",
+              borderRadius: "12px",
+              background: "#FEF2F2",
+              color: "#B91C1C",
+              border: "1px solid #FECACA",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <div style={{ marginBottom: "16px" }}>
+          <label
+            htmlFor="apartment_id"
+            style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}
+          >
+            Mieszkanie
+          </label>
+          <select
+            id="apartment_id"
+            name="apartment_id"
+            defaultValue=""
+            style={{
+              width: "100%",
+              padding: "12px 14px",
+              borderRadius: "12px",
+              border: "1px solid #D0D5DD",
+            }}
+          >
+            <option value="" disabled>
+              Wybierz mieszkanie
+            </option>
+            {(apartments ?? []).map((apartment) => (
+              <option key={apartment.id} value={apartment.id}>
+                {apartment.name || `Mieszkanie ${apartment.id}`} — {apartment.address}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "80px 1.5fr 100px 100px 140px 140px 180px",
+            gridTemplateColumns: "1fr 1fr",
             gap: "16px",
-            padding: "16px 20px",
-            borderBottom: "1px solid #E5E7EB",
-            fontSize: "13px",
-            color: "#667085",
-            fontWeight: 600,
+            marginBottom: "24px",
           }}
         >
-          <div>ID</div>
-          <div>Mieszkanie</div>
-          <div>Miesiąc</div>
-          <div>Rok</div>
-          <div>Status</div>
-          <div>Kwota</div>
-          <div>Akcja</div>
+          <div>
+            <label
+              htmlFor="month"
+              style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}
+            >
+              Miesiąc
+            </label>
+            <input
+              id="month"
+              name="month"
+              type="number"
+              min="1"
+              max="12"
+              defaultValue={now.getMonth() + 1}
+              style={{
+                width: "100%",
+                padding: "12px 14px",
+                borderRadius: "12px",
+                border: "1px solid #D0D5DD",
+              }}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="year"
+              style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}
+            >
+              Rok
+            </label>
+            <input
+              id="year"
+              name="year"
+              type="number"
+              defaultValue={now.getFullYear()}
+              style={{
+                width: "100%",
+                padding: "12px 14px",
+                borderRadius: "12px",
+                border: "1px solid #D0D5DD",
+              }}
+            />
+          </div>
         </div>
 
-        {(settlements ?? []).length === 0 ? (
-          <div style={{ padding: "24px 20px", color: "#667085" }}>
-            Brak rozliczeń.
-          </div>
-        ) : (
-          settlements?.map((settlement) => {
-            const apartment = Array.isArray(settlement.apartments)
-              ? settlement.apartments[0]
-              : settlement.apartments;
+        <div style={{ display: "flex", gap: "12px" }}>
+          <button
+            type="submit"
+            style={{
+              background: "#0B5CAD",
+              color: "white",
+              border: "none",
+              borderRadius: "999px",
+              padding: "12px 18px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Wygeneruj rozliczenie
+          </button>
 
-            const paid = settlement.status === "paid";
-
-            return (
-              <div
-                key={settlement.id}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "80px 1.5fr 100px 100px 140px 140px 180px",
-                  gap: "16px",
-                  padding: "16px 20px",
-                  borderBottom: "1px solid #F1F5F9",
-                  alignItems: "center",
-                }}
-              >
-                <div style={{ fontWeight: 600 }}>{settlement.id}</div>
-
-                <div>
-                  <div style={{ fontWeight: 600 }}>{apartment?.name || "—"}</div>
-                  <div style={{ fontSize: "13px", color: "#667085" }}>
-                    {apartment?.address || "—"}
-                  </div>
-                </div>
-
-                <div>{settlement.month}</div>
-                <div>{settlement.year}</div>
-
-                <div>
-                  <span
-                    style={{
-                      display: "inline-block",
-                      padding: "6px 10px",
-                      borderRadius: "999px",
-                      background: paid ? "#DCFCE7" : "#FEF2F2",
-                      color: paid ? "#166534" : "#B91C1C",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {paid ? "Opłacone" : "Nieopłacone"}
-                  </span>
-                </div>
-
-                <div style={{ fontWeight: 700 }}>
-                  {settlement.total_amount?.toFixed(2)} zł
-                </div>
-
-                <div>
-                  {!paid ? (
-                    <form action={markSettlementPaid}>
-                      <input type="hidden" name="id" value={settlement.id} />
-                      <button
-                        type="submit"
-                        style={{
-                          background: "#111827",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "999px",
-                          padding: "10px 14px",
-                          fontWeight: 600,
-                          cursor: "pointer",
-                        }}
-                      >
-                        Oznacz jako opłacone
-                      </button>
-                    </form>
-                  ) : (
-                    <span style={{ color: "#98A2B3", fontSize: "13px" }}>
-                      Brak akcji
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
+          <a
+            href="/admin/rozliczenia"
+            style={{
+              textDecoration: "none",
+              border: "1px solid #D0D5DD",
+              borderRadius: "999px",
+              padding: "12px 18px",
+              color: "#344054",
+              fontWeight: 600,
+            }}
+          >
+            Anuluj
+          </a>
+        </div>
+      </form>
     </main>
   );
 }
