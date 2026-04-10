@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { requireAuthenticatedProfile } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
 import AdminTopbar from "@/components/admin-topbar";
@@ -23,7 +24,6 @@ export default async function AdminReadingsPage() {
       hot_water,
       electricity,
       gas,
-      photo_url,
       apartments (
         id,
         name,
@@ -55,7 +55,7 @@ export default async function AdminReadingsPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1.5fr 140px 1fr 1fr 1fr 1fr 120px",
+            gridTemplateColumns: "1.4fr 140px 1fr 1fr 1fr 1fr 140px",
             gap: "16px",
             padding: "16px 20px",
             borderBottom: "1px solid #E5E7EB",
@@ -70,7 +70,7 @@ export default async function AdminReadingsPage() {
           <div>Ciepła woda</div>
           <div>Prąd</div>
           <div>Gaz</div>
-          <div>Zdjęcie</div>
+          <div>Szczegóły</div>
         </div>
 
         {(readings ?? []).length === 0 ? (
@@ -88,7 +88,7 @@ export default async function AdminReadingsPage() {
                 key={reading.id}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1.5fr 140px 1fr 1fr 1fr 1fr 120px",
+                  gridTemplateColumns: "1.4fr 140px 1fr 1fr 1fr 1fr 140px",
                   gap: "16px",
                   padding: "16px 20px",
                   borderBottom: "1px solid #F1F5F9",
@@ -107,22 +107,18 @@ export default async function AdminReadingsPage() {
                 <div>{reading.electricity ?? "—"} kWh</div>
                 <div>{reading.gas ?? "—"} m³</div>
                 <div>
-                  {reading.photo_url ? (
-                    <a
-                      href={reading.photo_url}
-                      target="_blank"
-                      rel="noreferrer"
+                  {apartment?.id ? (
+                    <Link
+                      href={`/admin/mieszkania/${apartment.id}/details`}
                       style={{
-                        color: "#0B5CAD",
                         textDecoration: "none",
+                        color: "#0B5CAD",
                         fontWeight: 600,
                       }}
                     >
-                      📷 Zobacz
-                    </a>
-                  ) : (
-                    <span style={{ color: "#98A2B3" }}>Brak</span>
-                  )}
+                      Zobacz mieszkanie
+                    </Link>
+                  ) : null}
                 </div>
               </div>
             );
