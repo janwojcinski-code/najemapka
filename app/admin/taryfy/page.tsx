@@ -19,7 +19,7 @@ export default async function AdminTariffsPage() {
     .order("effective_from", { ascending: false });
 
   return (
-    <main style={{ padding: "2rem", maxWidth: "1100px", margin: "0 auto" }}>
+    <main style={{ padding: "2rem", maxWidth: "1150px", margin: "0 auto" }}>
       <AdminTopbar />
 
       <div
@@ -65,7 +65,7 @@ export default async function AdminTariffsPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "180px 180px 180px 1fr",
+            gridTemplateColumns: "180px 180px 180px 1fr 120px",
             gap: "16px",
             padding: "16px 20px",
             borderBottom: "1px solid #E5E7EB",
@@ -78,6 +78,7 @@ export default async function AdminTariffsPage() {
           <div>Stawka</div>
           <div>Obowiązuje od</div>
           <div>Status</div>
+          <div>Akcja</div>
         </div>
 
         {(tariffs ?? []).length === 0 ? (
@@ -90,7 +91,7 @@ export default async function AdminTariffsPage() {
               key={tariff.id}
               style={{
                 display: "grid",
-                gridTemplateColumns: "180px 180px 180px 1fr",
+                gridTemplateColumns: "180px 180px 180px 1fr 120px",
                 gap: "16px",
                 padding: "16px 20px",
                 borderBottom: "1px solid #F1F5F9",
@@ -114,6 +115,18 @@ export default async function AdminTariffsPage() {
                 >
                   Aktywna / archiwalna wg dat
                 </span>
+              </div>
+              <div>
+                <Link
+                  href={`/admin/taryfy/${tariff.id}`}
+                  style={{
+                    textDecoration: "none",
+                    color: "#0B5CAD",
+                    fontWeight: 600,
+                  }}
+                >
+                  Edytuj
+                </Link>
               </div>
             </div>
           ))
