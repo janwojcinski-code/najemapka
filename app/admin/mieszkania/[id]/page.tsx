@@ -1,76 +1,186 @@
-import { AppShell } from "@/components/layout/app-shell";
-import { apartments, readings, settlements } from "@/lib/mock-data";
-import { notFound } from "next/navigation";
-import { formatCurrency, utilityLabel, utilityUnit } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+import { redirect } from "next/navigation";
+import { requireAuthenticatedProfile } from "@/lib/auth/user";
+import { createClient } from "@/lib/supabase/server";
+import AdminTopbar from "@/components/admin-topbar";
 
-export default async function AdminApartmentDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+async function updateApartment(formData: FormData) {
+  "use server";
+
+  const supabase = await createClient();
+
+  const id = Number(formData.get("id"));
+  const name = String(formData.get("name") || "").trim();
+  const address = String(formData.get("address") || "").trim();
+  const isActive = formData.get("is_active") === "on";
+
+  if (!id || !name || !address) {
+    redirect(`/admin/mieszkania/${id}?error=missing_fields`);
+  }
+
+  const { error } = await supabase
+    .from("apartments")
+    .update({
+      name,
+      address,
+      is_active: isActive,
+    })
+    .eq("id", id);
+
+  if (error) {
+    redirect(`/admin/mieszkania/${id}?error=save_failed`);
+  }
+
+  redirect("/admin/mieszkania");
+}
+
+export default async function ApartmentEditPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ error?: string }>;
+}) {
+  try {
+    await requireAuthenticatedProfile(["admin"]);
+  } catch {
+    redirect("/logowanie");
+  }
+
   const { id } = await params;
-  const apartment = apartments.find((item) => item.id === id);
-  if (!apartment) notFound();
+  const supabase = await createClient();
 
-  const apartmentReadings = readings.filter((item) => item.apartment_id === id);
-  const apartmentSettlements = settlements.filter((item) => item.apartment_id === id);
+  const { data: apartment } = await supabase
+    .from("apartments")
+    .select("id, name, address, is_active")
+    .eq("id", Number(id))
+    .single();
+
+  if (!apartment) {
+    redirect("/admin/mieszkania");
+  }
+
+  const paramsError = (await searchParams) || {};
+  const error =
+    paramsError.error === "missing_fields"
+      ? "Uzupełnij nazwę i adres."
+      : paramsError.error === "save_failed"
+      ? "Nie udało się zapisać zmian."
+      : null;
 
   return (
-    <AppShell userName="Administrator" title={apartment.name} subtitle={`${apartment.address}, ${apartment.city}`}>
-      <div className="grid-2">
-        <div className="section-card">
-          <h2 style={{ marginTop: 0 }}>Dane mieszkania</h2>
-          <div className="item-list">
-            <div><strong>Kod:</strong> {apartment.code}</div>
-            <div><strong>Najemca:</strong> {apartment.tenant_name}</div>
-            <div><strong>Powierzchnia:</strong> {apartment.area_m2} m²</div>
+    <main style={{ padding: "2rem", maxWidth: "760px", margin: "0 auto" }}>
+      <AdminTopbar />
+
+      <h1 style={{ fontSize: "32px", fontWeight: 700, marginBottom: "8px" }}>
+        Edytuj mieszkanie
+      </h1>
+      <p style={{ margin: "0 0 24px", color: "#667085" }}>
+        Zmień dane mieszkania #{apartment.id}
+      </p>
+
+      <form
+        action={updateApartment}
+        style={{
+          background: "white",
+          border: "1px solid #E5E7EB",
+          borderRadius: "20px",
+          padding: "24px",
+        }}
+      >
+        <input type="hidden" name="id" value={apartment.id} />
+
+        {error && (
+          <div
+            style={{
+              marginBottom: "16px",
+              padding: "12px 14px",
+              borderRadius: "12px",
+              background: "#FEF2F2",
+              color: "#B91C1C",
+              border: "1px solid #FECACA",
+            }}
+          >
+            {error}
           </div>
+        )}
+
+        <div style={{ marginBottom: "16px" }}>
+          <label htmlFor="name" style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>
+            Nazwa mieszkania
+          </label>
+          <input
+            id="name"
+            name="name"
+            defaultValue={apartment.name ?? ""}
+            style={{
+              width: "100%",
+              padding: "12px 14px",
+              borderRadius: "12px",
+              border: "1px solid #D0D5DD",
+            }}
+          />
         </div>
 
-        <div className="section-card">
-          <h2 style={{ marginTop: 0 }}>Ostatnie rozliczenia</h2>
-          <div className="item-list">
-            {apartmentSettlements.map((item) => (
-              <div key={item.id} className="list-card">
-                <div className="icon-box green">PDF</div>
-                <div>
-                  <div style={{ fontWeight: 800 }}>{item.period_month}</div>
-                  <div style={{ color: "#667081" }}>Data wystawienia: {item.issue_date}</div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontWeight: 900 }}>{formatCurrency(item.total_amount)}</div>
-                  <Badge variant={item.status === "paid" ? "success" : "danger"}>{item.status === "paid" ? "Opłacone" : "Nieopłacone"}</Badge>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div style={{ marginBottom: "16px" }}>
+          <label htmlFor="address" style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>
+            Adres
+          </label>
+          <input
+            id="address"
+            name="address"
+            defaultValue={apartment.address ?? ""}
+            style={{
+              width: "100%",
+              padding: "12px 14px",
+              borderRadius: "12px",
+              border: "1px solid #D0D5DD",
+            }}
+          />
         </div>
-      </div>
 
-      <div className="section-card">
-        <h2 style={{ marginTop: 0 }}>Ostatnie odczyty</h2>
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Medium</th>
-                <th>Data</th>
-                <th>Stan licznika</th>
-                <th>Zużycie</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {apartmentReadings.map((item) => (
-                <tr key={item.id}>
-                  <td>{utilityLabel(item.utility_type)}</td>
-                  <td>{item.reading_date}</td>
-                  <td>{item.value} {utilityUnit(item.utility_type)}</td>
-                  <td>{item.usage ?? 0} {utilityUnit(item.utility_type)}</td>
-                  <td><Badge variant={item.status === "approved" ? "success" : "info"}>{item.status}</Badge></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            marginBottom: "24px",
+          }}
+        >
+          <input type="checkbox" name="is_active" defaultChecked={!!apartment.is_active} />
+          <span>Aktywne mieszkanie</span>
+        </label>
+
+        <div style={{ display: "flex", gap: "12px" }}>
+          <button
+            type="submit"
+            style={{
+              background: "#0B5CAD",
+              color: "white",
+              border: "none",
+              borderRadius: "999px",
+              padding: "12px 18px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Zapisz zmiany
+          </button>
+
+          <a
+            href="/admin/mieszkania"
+            style={{
+              textDecoration: "none",
+              border: "1px solid #D0D5DD",
+              borderRadius: "999px",
+              padding: "12px 18px",
+              color: "#344054",
+              fontWeight: 600,
+            }}
+          >
+            Anuluj
+          </a>
         </div>
-      </div>
-    </AppShell>
+      </form>
+    </main>
   );
 }
