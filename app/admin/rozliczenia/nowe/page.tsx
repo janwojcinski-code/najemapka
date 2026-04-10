@@ -49,13 +49,24 @@ async function createSettlement(formData: FormData) {
 
   const { data: prices } = await supabase
     .from("utility_prices")
-    .select("utility_type, price, price_gross, effective_from")
+    .select("utility_type, price, price_gross, effective_from, apartment_id")
     .lte("effective_from", `${year}-${String(month).padStart(2, "0")}-31`)
     .order("effective_from", { ascending: false });
 
   const getPrice = (type: string) => {
-    const found = prices?.find((p: any) => p.utility_type === type);
-    return Number(found?.price_gross ?? found?.price ?? 0);
+    const apartmentSpecific = prices?.find(
+      (p: any) => p.utility_type === type && p.apartment_id === apartmentId
+    );
+
+    if (apartmentSpecific) {
+      return Number(apartmentSpecific.price_gross ?? apartmentSpecific.price ?? 0);
+    }
+
+    const globalPrice = prices?.find(
+      (p: any) => p.utility_type === type && (p.apartment_id === null || p.apartment_id === undefined)
+    );
+
+    return Number(globalPrice?.price_gross ?? globalPrice?.price ?? 0);
   };
 
   const coldPrice = getPrice("cold_water");
@@ -68,11 +79,7 @@ async function createSettlement(formData: FormData) {
   const electricityCost = electricityDiff * electricityPrice;
   const gasCost = gasDiff * gasPrice;
 
-  const total =
-    coldCost +
-    hotCost +
-    electricityCost +
-    gasCost;
+  const total = coldCost + hotCost + electricityCost + gasCost;
 
   const { error } = await supabase.from("settlements").insert({
     apartment_id: apartmentId,
@@ -130,7 +137,7 @@ export default async function NewSettlementPage({
         Generuj rozliczenie
       </h1>
       <p style={{ margin: "0 0 24px", color: "#667085" }}>
-        System policzy zużycie na podstawie 2 ostatnich odczytów i aktualnych taryf.
+        System bierze najpierw taryfę dla mieszkania, a jeśli jej nie ma — taryfę globalną.
       </p>
 
       <form
