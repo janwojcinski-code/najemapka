@@ -19,7 +19,7 @@ export default async function AdminApartmentsPage() {
     .order("id", { ascending: false });
 
   return (
-    <main style={{ padding: "2rem", maxWidth: "1100px", margin: "0 auto" }}>
+    <main style={{ padding: "2rem", maxWidth: "1150px", margin: "0 auto" }}>
       <AdminTopbar />
 
       <div
@@ -65,7 +65,7 @@ export default async function AdminApartmentsPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "100px 1.2fr 2fr 140px",
+            gridTemplateColumns: "80px 1.2fr 2fr 140px 140px",
             gap: "16px",
             padding: "16px 20px",
             borderBottom: "1px solid #E5E7EB",
@@ -78,6 +78,7 @@ export default async function AdminApartmentsPage() {
           <div>Nazwa</div>
           <div>Adres</div>
           <div>Status</div>
+          <div>Akcja</div>
         </div>
 
         {(apartments ?? []).length === 0 ? (
@@ -90,7 +91,7 @@ export default async function AdminApartmentsPage() {
               key={apartment.id}
               style={{
                 display: "grid",
-                gridTemplateColumns: "100px 1.2fr 2fr 140px",
+                gridTemplateColumns: "80px 1.2fr 2fr 140px 140px",
                 gap: "16px",
                 padding: "16px 20px",
                 borderBottom: "1px solid #F1F5F9",
@@ -114,6 +115,18 @@ export default async function AdminApartmentsPage() {
                 >
                   {apartment.is_active ? "Aktywne" : "Nieaktywne"}
                 </span>
+              </div>
+              <div>
+                <Link
+                  href={`/admin/mieszkania/${apartment.id}`}
+                  style={{
+                    textDecoration: "none",
+                    color: "#0B5CAD",
+                    fontWeight: 600,
+                  }}
+                >
+                  Edytuj
+                </Link>
               </div>
             </div>
           ))
