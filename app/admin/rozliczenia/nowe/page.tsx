@@ -47,37 +47,48 @@ async function createSettlement(formData: FormData) {
   const electricityDiff = Math.max((latest.electricity ?? 0) - (previous.electricity ?? 0), 0);
   const gasDiff = Math.max((latest.gas ?? 0) - (previous.gas ?? 0), 0);
 
+  const targetDate = `${year}-${String(month).padStart(2, "0")}-01`;
+
   const { data: prices } = await supabase
     .from("utility_prices")
-    .select("utility_type, price, price_gross, effective_from, apartment_id")
-    .lte("effective_from", `${year}-${String(month).padStart(2, "0")}-31`)
-    .order("effective_from", { ascending: false });
+    .select("utility_type, price_per_unit, fixed_fee, valid_from, valid_to, apartment_id")
+    .lte("valid_from", targetDate)
+    .order("valid_from", { ascending: false });
 
-  const getPrice = (type: string) => {
+  const getTariff = (type: string) => {
     const apartmentSpecific = prices?.find(
-      (p: any) => p.utility_type === type && p.apartment_id === apartmentId
+      (p: any) =>
+        p.utility_type === type &&
+        p.apartment_id === apartmentId &&
+        (!p.valid_to || p.valid_to >= targetDate)
     );
 
-    if (apartmentSpecific) {
-      return Number(apartmentSpecific.price_gross ?? apartmentSpecific.price ?? 0);
-    }
+    if (apartmentSpecific) return apartmentSpecific;
 
-    const globalPrice = prices?.find(
-      (p: any) => p.utility_type === type && (p.apartment_id === null || p.apartment_id === undefined)
+    const globalTariff = prices?.find(
+      (p: any) =>
+        p.utility_type === type &&
+        (p.apartment_id === null || p.apartment_id === undefined) &&
+        (!p.valid_to || p.valid_to >= targetDate)
     );
 
-    return Number(globalPrice?.price_gross ?? globalPrice?.price ?? 0);
+    return globalTariff ?? null;
   };
 
-  const coldPrice = getPrice("cold_water");
-  const hotPrice = getPrice("hot_water");
-  const electricityPrice = getPrice("electricity");
-  const gasPrice = getPrice("gas");
+  const coldTariff = getTariff("cold_water");
+  const hotTariff = getTariff("hot_water");
+  const electricityTariff = getTariff("electricity");
+  const gasTariff = getTariff("gas");
 
-  const coldCost = coldDiff * coldPrice;
-  const hotCost = hotDiff * hotPrice;
-  const electricityCost = electricityDiff * electricityPrice;
-  const gasCost = gasDiff * gasPrice;
+  const coldCost =
+    coldDiff * Number(coldTariff?.price_per_unit ?? 0) + Number(coldTariff?.fixed_fee ?? 0);
+  const hotCost =
+    hotDiff * Number(hotTariff?.price_per_unit ?? 0) + Number(hotTariff?.fixed_fee ?? 0);
+  const electricityCost =
+    electricityDiff * Number(electricityTariff?.price_per_unit ?? 0) +
+    Number(electricityTariff?.fixed_fee ?? 0);
+  const gasCost =
+    gasDiff * Number(gasTariff?.price_per_unit ?? 0) + Number(gasTariff?.fixed_fee ?? 0);
 
   const total = coldCost + hotCost + electricityCost + gasCost;
 
