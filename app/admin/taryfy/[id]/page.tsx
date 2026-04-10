@@ -10,30 +10,35 @@ async function updateTariff(formData: FormData) {
 
   const id = Number(formData.get("id"));
   const utilityType = String(formData.get("utility_type") || "").trim();
-  const priceRaw = String(formData.get("price") || "").trim();
-  const effectiveFrom = String(formData.get("effective_from") || "").trim();
+  const priceRaw = String(formData.get("price_per_unit") || "").trim();
+  const fixedFeeRaw = String(formData.get("fixed_fee") || "").trim();
+  const validFrom = String(formData.get("valid_from") || "").trim();
+  const validTo = String(formData.get("valid_to") || "").trim();
   const apartmentIdRaw = String(formData.get("apartment_id") || "").trim();
 
-  if (!id || !utilityType || !priceRaw || !effectiveFrom) {
-    redirect(`/admin/taryfy/${id}?error=missing_fields`);
+  if (!id || !utilityType || !priceRaw || !validFrom) {
+    redirect(`/admin/taryfy/${id}?error=Uzupełnij wymagane pola`);
   }
 
-  const price = Number(priceRaw);
+  const price_per_unit = Number(priceRaw);
+  const fixed_fee = fixedFeeRaw ? Number(fixedFeeRaw) : 0;
   const apartment_id = apartmentIdRaw ? Number(apartmentIdRaw) : null;
+  const valid_to = validTo || null;
 
   const { error } = await supabase
     .from("utility_prices")
     .update({
       utility_type: utilityType,
-      price,
-      price_gross: price,
-      effective_from: effectiveFrom,
+      price_per_unit,
+      fixed_fee,
+      valid_from: validFrom,
+      valid_to,
       apartment_id,
     })
     .eq("id", id);
 
   if (error) {
-    redirect(`/admin/taryfy/${id}?error=save_failed`);
+    redirect(`/admin/taryfy/${id}?error=${encodeURIComponent(error.message)}`);
   }
 
   redirect("/admin/taryfy");
@@ -65,12 +70,7 @@ export default async function TariffEditPage({
   }
 
   const paramsError = (await searchParams) || {};
-  const error =
-    paramsError.error === "missing_fields"
-      ? "Uzupełnij wszystkie pola."
-      : paramsError.error === "save_failed"
-      ? "Nie udało się zapisać taryfy."
-      : null;
+  const error = paramsError.error || null;
 
   return (
     <main style={{ padding: "2rem", maxWidth: "760px", margin: "0 auto" }}>
@@ -103,6 +103,7 @@ export default async function TariffEditPage({
               background: "#FEF2F2",
               color: "#B91C1C",
               border: "1px solid #FECACA",
+              whiteSpace: "pre-wrap",
             }}
           >
             {error}
@@ -146,9 +147,7 @@ export default async function TariffEditPage({
               border: "1px solid #D0D5DD",
             }}
           >
-            <option value="">
-              Globalna taryfa (dla wszystkich mieszkań)
-            </option>
+            <option value="">Globalna taryfa (dla wszystkich mieszkań)</option>
             {(apartments ?? []).map((apartment) => (
               <option key={apartment.id} value={apartment.id}>
                 {apartment.name || `Mieszkanie ${apartment.id}`} — {apartment.address}
@@ -158,15 +157,52 @@ export default async function TariffEditPage({
         </div>
 
         <div style={{ marginBottom: "16px" }}>
-          <label htmlFor="price" style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>
-            Stawka
+          <label htmlFor="price_per_unit" style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>
+            Cena za jednostkę
           </label>
           <input
-            id="price"
-            name="price"
+            id="price_per_unit"
+            name="price_per_unit"
             type="number"
             step="0.0001"
-            defaultValue={tariff.price_gross ?? tariff.price ?? ""}
+            defaultValue={tariff.price_per_unit ?? ""}
+            style={{
+              width: "100%",
+              padding: "12px 14px",
+              borderRadius: "12px",
+              border: "1px solid #D0D5DD",
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "16px" }}>
+          <label htmlFor="fixed_fee" style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>
+            Opłata stała
+          </label>
+          <input
+            id="fixed_fee"
+            name="fixed_fee"
+            type="number"
+            step="0.01"
+            defaultValue={tariff.fixed_fee ?? 0}
+            style={{
+              width: "100%",
+              padding: "12px 14px",
+              borderRadius: "12px",
+              border: "1px solid #D0D5DD",
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "16px" }}>
+          <label htmlFor="valid_from" style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>
+            Obowiązuje od
+          </label>
+          <input
+            id="valid_from"
+            name="valid_from"
+            type="date"
+            defaultValue={tariff.valid_from ?? ""}
             style={{
               width: "100%",
               padding: "12px 14px",
@@ -177,14 +213,14 @@ export default async function TariffEditPage({
         </div>
 
         <div style={{ marginBottom: "24px" }}>
-          <label htmlFor="effective_from" style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>
-            Obowiązuje od
+          <label htmlFor="valid_to" style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>
+            Obowiązuje do
           </label>
           <input
-            id="effective_from"
-            name="effective_from"
+            id="valid_to"
+            name="valid_to"
             type="date"
-            defaultValue={tariff.effective_from ?? ""}
+            defaultValue={tariff.valid_to ?? ""}
             style={{
               width: "100%",
               padding: "12px 14px",
