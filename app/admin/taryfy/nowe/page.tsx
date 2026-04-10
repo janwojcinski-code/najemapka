@@ -9,22 +9,27 @@ async function createTariff(formData: FormData) {
   const supabase = await createClient();
 
   const utilityType = String(formData.get("utility_type") || "").trim();
-  const priceRaw = String(formData.get("price") || "").trim();
-  const effectiveFrom = String(formData.get("effective_from") || "").trim();
+  const priceRaw = String(formData.get("price_per_unit") || "").trim();
+  const fixedFeeRaw = String(formData.get("fixed_fee") || "").trim();
+  const validFrom = String(formData.get("valid_from") || "").trim();
+  const validTo = String(formData.get("valid_to") || "").trim();
   const apartmentIdRaw = String(formData.get("apartment_id") || "").trim();
 
-  if (!utilityType || !priceRaw || !effectiveFrom) {
-    redirect("/admin/taryfy/nowe?error=Uzupełnij wszystkie pola");
+  if (!utilityType || !priceRaw || !validFrom) {
+    redirect("/admin/taryfy/nowe?error=Uzupełnij wymagane pola");
   }
 
-  const price = Number(priceRaw);
+  const price_per_unit = Number(priceRaw);
+  const fixed_fee = fixedFeeRaw ? Number(fixedFeeRaw) : 0;
   const apartment_id = apartmentIdRaw ? Number(apartmentIdRaw) : null;
+  const valid_to = validTo || null;
 
   const { error } = await supabase.from("utility_prices").insert({
     utility_type: utilityType,
-    price,
-    price_gross: price,
-    effective_from: effectiveFrom,
+    price_per_unit,
+    fixed_fee,
+    valid_from: validFrom,
+    valid_to,
     apartment_id,
   });
 
@@ -93,10 +98,7 @@ export default async function NewTariffPage({
         )}
 
         <div style={{ marginBottom: "16px" }}>
-          <label
-            htmlFor="utility_type"
-            style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}
-          >
+          <label htmlFor="utility_type" style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>
             Medium
           </label>
           <select
@@ -121,10 +123,7 @@ export default async function NewTariffPage({
         </div>
 
         <div style={{ marginBottom: "16px" }}>
-          <label
-            htmlFor="apartment_id"
-            style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}
-          >
+          <label htmlFor="apartment_id" style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>
             Mieszkanie
           </label>
           <select
@@ -138,9 +137,7 @@ export default async function NewTariffPage({
               border: "1px solid #D0D5DD",
             }}
           >
-            <option value="">
-              Globalna taryfa (dla wszystkich mieszkań)
-            </option>
+            <option value="">Globalna taryfa (dla wszystkich mieszkań)</option>
             {(apartments ?? []).map((apartment) => (
               <option key={apartment.id} value={apartment.id}>
                 {apartment.name || `Mieszkanie ${apartment.id}`} — {apartment.address}
@@ -150,15 +147,12 @@ export default async function NewTariffPage({
         </div>
 
         <div style={{ marginBottom: "16px" }}>
-          <label
-            htmlFor="price"
-            style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}
-          >
-            Stawka
+          <label htmlFor="price_per_unit" style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>
+            Cena za jednostkę
           </label>
           <input
-            id="price"
-            name="price"
+            id="price_per_unit"
+            name="price_per_unit"
             type="number"
             step="0.0001"
             placeholder="np. 0.84"
@@ -171,16 +165,50 @@ export default async function NewTariffPage({
           />
         </div>
 
-        <div style={{ marginBottom: "24px" }}>
-          <label
-            htmlFor="effective_from"
-            style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}
-          >
+        <div style={{ marginBottom: "16px" }}>
+          <label htmlFor="fixed_fee" style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>
+            Opłata stała
+          </label>
+          <input
+            id="fixed_fee"
+            name="fixed_fee"
+            type="number"
+            step="0.01"
+            placeholder="np. 15.00"
+            defaultValue="0"
+            style={{
+              width: "100%",
+              padding: "12px 14px",
+              borderRadius: "12px",
+              border: "1px solid #D0D5DD",
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "16px" }}>
+          <label htmlFor="valid_from" style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>
             Obowiązuje od
           </label>
           <input
-            id="effective_from"
-            name="effective_from"
+            id="valid_from"
+            name="valid_from"
+            type="date"
+            style={{
+              width: "100%",
+              padding: "12px 14px",
+              borderRadius: "12px",
+              border: "1px solid #D0D5DD",
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "24px" }}>
+          <label htmlFor="valid_to" style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>
+            Obowiązuje do
+          </label>
+          <input
+            id="valid_to"
+            name="valid_to"
             type="date"
             style={{
               width: "100%",
