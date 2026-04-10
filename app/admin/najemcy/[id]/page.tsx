@@ -4,7 +4,7 @@ import { requireAuthenticatedProfile } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
 import AdminTopbar from "@/components/admin-topbar";
 
-export default async function ApartmentDetailsPage({
+export default async function TenantDetailsPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -16,83 +16,57 @@ export default async function ApartmentDetailsPage({
   }
 
   const { id } = await params;
-  const apartmentId = Number(id);
   const supabase = await createClient();
 
-  const { data: apartment } = await supabase
-    .from("apartments")
-    .select("*")
-    .eq("id", apartmentId)
-    .single();
-
-  if (!apartment) redirect("/admin/mieszkania");
-
-  const [{ data: readings }, { data: settlements }, { data: assignments }, { data: tariffs }] =
-    await Promise.all([
-      supabase
-        .from("meter_readings")
-        .select("*")
-        .eq("apartment_id", apartment.id)
-        .order("reading_date", { ascending: false })
-        .limit(5),
-
-      supabase
-        .from("settlements")
-        .select("id, month, year, total_amount, status")
-        .eq("apartment_id", apartment.id)
-        .order("year", { ascending: false })
-        .order("month", { ascending: false })
-        .limit(5),
-
-      supabase
-        .from("tenant_assignments")
-        .select(
-          `
-          id,
-          start_date,
-          end_date,
-          tenant_user_id,
-          profiles (
-            id,
-            email,
-            full_name
-          )
+  const [{ data: tenant }, { data: assignments }] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", id).single(),
+    supabase
+      .from("tenant_assignments")
+      .select(
         `
+        id,
+        apartment_id,
+        start_date,
+        end_date,
+        apartments (
+          id,
+          name,
+          address
         )
-        .eq("apartment_id", apartment.id)
-        .is("end_date", null),
+      `
+      )
+      .eq("tenant_user_id", id)
+      .order("start_date", { ascending: false }),
+  ]);
 
-      supabase
-        .from("utility_prices")
-        .select("*")
-        .or(`apartment_id.is.null,apartment_id.eq.${apartment.id}`)
-        .order("effective_from", { ascending: false }),
-    ]);
+  if (!tenant) {
+    redirect("/admin/najemcy");
+  }
 
-  const activeAssignment = assignments?.[0];
-  const tenant = activeAssignment
-    ? Array.isArray(activeAssignment.profiles)
-      ? activeAssignment.profiles[0]
-      : activeAssignment.profiles
+  const activeAssignment = (assignments ?? []).find((a: any) => !a.end_date);
+  const activeApartment = activeAssignment
+    ? Array.isArray(activeAssignment.apartments)
+      ? activeAssignment.apartments[0]
+      : activeAssignment.apartments
     : null;
 
   return (
-    <main style={{ padding: "2rem", maxWidth: "1000px", margin: "0 auto" }}>
+    <main style={{ padding: "2rem", maxWidth: "950px", margin: "0 auto" }}>
       <AdminTopbar />
 
       <div style={{ marginBottom: "16px" }}>
         <Link
-          href="/admin/mieszkania"
+          href="/admin/najemcy"
           style={{ textDecoration: "none", color: "#0B5CAD", fontWeight: 600 }}
         >
-          ← Wróć do mieszkań
+          ← Wróć do najemców
         </Link>
       </div>
 
       <h1 style={{ fontSize: "32px", fontWeight: 700, marginBottom: "8px" }}>
-        {apartment.name || `Mieszkanie ${apartment.id}`}
+        {tenant.full_name || tenant.email}
       </h1>
-      <p style={{ margin: "0 0 24px", color: "#667085" }}>{apartment.address}</p>
+      <p style={{ margin: "0 0 24px", color: "#667085" }}>{tenant.email}</p>
 
       <div
         style={{
@@ -102,101 +76,70 @@ export default async function ApartmentDetailsPage({
           marginBottom: "24px",
         }}
       >
+        <InfoCard title="Rola" value={tenant.role || "tenant"} />
         <InfoCard
-          title="Status"
-          value={apartment.is_active ? "Aktywne" : "Nieaktywne"}
-        />
-        <InfoCard
-          title="Aktywny najemca"
-          value={tenant ? `${tenant.full_name || tenant.email}` : "Brak"}
-          link={tenant ? `/admin/najemcy/${tenant.id}` : undefined}
+          title="Aktywne mieszkanie"
+          value={
+            activeApartment
+              ? `${activeApartment.name || "—"} — ${activeApartment.address || "—"}`
+              : "Brak przypisania"
+          }
+          link={activeApartment ? `/admin/mieszkania/${activeApartment.id}/details` : undefined}
         />
       </div>
 
-      <Section title="Aktywne taryfy">
-        {(tariffs ?? []).length === 0 ? (
-          <EmptyText text="Brak taryf globalnych i przypisanych do mieszkania." />
+      <section
+        style={{
+          background: "white",
+          border: "1px solid #E5E7EB",
+          borderRadius: "20px",
+          padding: "20px",
+        }}
+      >
+        <h2 style={{ fontSize: "20px", marginBottom: "16px" }}>Historia przypisań</h2>
+
+        {(assignments ?? []).length === 0 ? (
+          <div style={{ color: "#667085" }}>Brak przypisań.</div>
         ) : (
-          tariffs.map((tariff: any) => {
-            const scope =
-              tariff.apartment_id === apartment.id ? "Per mieszkanie" : "Globalna";
+          assignments?.map((a: any) => {
+            const apartment = Array.isArray(a.apartments)
+              ? a.apartments[0]
+              : a.apartments;
 
             return (
-              <Row
-                key={tariff.id}
-                left={
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{tariff.utility_type}</div>
-                    <div style={{ fontSize: "13px", color: "#667085" }}>
-                      {scope} • od {tariff.effective_from}
-                    </div>
+              <div
+                key={a.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "12px 0",
+                  borderBottom: "1px solid #F1F5F9",
+                  gap: "16px",
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 600 }}>
+                    {apartment?.name || "—"} — {apartment?.address || "—"}
                   </div>
-                }
-                right={
-                  <Link
-                    href={`/admin/taryfy/${tariff.id}`}
-                    style={{ color: "#0B5CAD", textDecoration: "none", fontWeight: 600 }}
-                  >
-                    {Number(tariff.price_gross ?? tariff.price ?? 0).toFixed(4)}
-                  </Link>
-                }
-              />
+                  <div style={{ fontSize: "13px", color: "#667085" }}>
+                    {a.start_date} → {a.end_date || "teraz"}
+                  </div>
+                </div>
+                <div>
+                  {apartment?.id ? (
+                    <Link
+                      href={`/admin/mieszkania/${apartment.id}/details`}
+                      style={{ textDecoration: "none", color: "#0B5CAD", fontWeight: 600 }}
+                    >
+                      Zobacz mieszkanie
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
             );
           })
         )}
-      </Section>
-
-      <Section title="Ostatnie odczyty">
-        {(readings ?? []).length === 0 ? (
-          <EmptyText text="Brak odczytów." />
-        ) : (
-          readings.map((r: any) => (
-            <Row
-              key={r.id}
-              left={
-                <div>
-                  <div style={{ fontWeight: 600 }}>{r.reading_date}</div>
-                  <div style={{ fontSize: "13px", color: "#667085" }}>
-                    ZW: {r.cold_water ?? "—"} • CW: {r.hot_water ?? "—"} • Prąd:{" "}
-                    {r.electricity ?? "—"} • Gaz: {r.gas ?? "—"}
-                  </div>
-                </div>
-              }
-              right={<span style={{ color: "#667085" }}>Odczyt</span>}
-            />
-          ))
-        )}
-      </Section>
-
-      <Section title="Ostatnie rozliczenia">
-        {(settlements ?? []).length === 0 ? (
-          <EmptyText text="Brak rozliczeń." />
-        ) : (
-          settlements.map((s: any) => (
-            <Row
-              key={s.id}
-              left={
-                <div>
-                  <div style={{ fontWeight: 600 }}>
-                    {s.month}/{s.year}
-                  </div>
-                  <div style={{ fontSize: "13px", color: "#667085" }}>
-                    {s.status === "paid" ? "Opłacone" : "Nieopłacone"}
-                  </div>
-                </div>
-              }
-              right={
-                <Link
-                  href={`/admin/rozliczenia/${s.id}`}
-                  style={{ color: "#0B5CAD", textDecoration: "none", fontWeight: 600 }}
-                >
-                  {Number(s.total_amount ?? 0).toFixed(2)} zł
-                </Link>
-              }
-            />
-          ))
-        )}
-      </Section>
+      </section>
     </main>
   );
 }
@@ -231,55 +174,4 @@ function InfoCard({
       )}
     </div>
   );
-}
-
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section
-      style={{
-        background: "white",
-        border: "1px solid #E5E7EB",
-        borderRadius: "20px",
-        padding: "20px",
-        marginBottom: "20px",
-      }}
-    >
-      <h2 style={{ fontSize: "20px", marginBottom: "16px" }}>{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-function Row({
-  left,
-  right,
-}: {
-  left: React.ReactNode;
-  right: React.ReactNode;
-}) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "12px 0",
-        borderBottom: "1px solid #F1F5F9",
-        gap: "16px",
-      }}
-    >
-      <div>{left}</div>
-      <div>{right}</div>
-    </div>
-  );
-}
-
-function EmptyText({ text }: { text: string }) {
-  return <div style={{ color: "#667085" }}>{text}</div>;
 }
