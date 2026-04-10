@@ -109,6 +109,35 @@ export default async function AdminDashboardPage() {
         >
           Przejdź do taryf
         </a>
+<a
+  href="/admin/najemcy"
+  style={{
+    display: "inline-block",
+    background: "#EA580C",
+    color: "white",
+    textDecoration: "none",
+    padding: "12px 18px",
+    borderRadius: "999px",
+    fontWeight: 600,
+  }}
+>
+  Przejdź do najemców
+</a>
+
+<a
+  href="/admin/odczyty"
+  style={{
+    display: "inline-block",
+    background: "#2563EB",
+    color: "white",
+    textDecoration: "none",
+    padding: "12px 18px",
+    borderRadius: "999px",
+    fontWeight: 600,
+  }}
+>
+  Przejdź do odczytów
+</a>
       </div>
 
       {data.recentApartments.length > 0 && (
