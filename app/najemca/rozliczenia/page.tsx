@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuthenticatedProfile } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
@@ -102,7 +103,7 @@ export default async function TenantSettlementsPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "120px 120px 1fr 140px",
+            gridTemplateColumns: "120px 120px 1fr 140px 140px",
             gap: "16px",
             padding: "16px 20px",
             borderBottom: "1px solid #E5E7EB",
@@ -115,6 +116,7 @@ export default async function TenantSettlementsPage() {
           <div>Rok</div>
           <div>Status</div>
           <div>Kwota</div>
+          <div>Szczegóły</div>
         </div>
 
         {(settlements ?? []).length === 0 ? (
@@ -127,7 +129,7 @@ export default async function TenantSettlementsPage() {
               key={settlement.id}
               style={{
                 display: "grid",
-                gridTemplateColumns: "120px 120px 1fr 140px",
+                gridTemplateColumns: "120px 120px 1fr 140px 140px",
                 gap: "16px",
                 padding: "16px 20px",
                 borderBottom: "1px solid #F1F5F9",
@@ -155,6 +157,18 @@ export default async function TenantSettlementsPage() {
               </div>
               <div style={{ fontWeight: 700 }}>
                 {settlement.total_amount?.toFixed(2)} zł
+              </div>
+              <div>
+                <Link
+                  href={`/najemca/rozliczenia/${settlement.id}`}
+                  style={{
+                    color: "#0B5CAD",
+                    textDecoration: "none",
+                    fontWeight: 600,
+                  }}
+                >
+                  Zobacz
+                </Link>
               </div>
             </div>
           ))
