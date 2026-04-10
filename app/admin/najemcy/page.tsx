@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAuthenticatedProfile } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
@@ -42,7 +43,7 @@ export default async function AdminTenantsPage() {
   });
 
   return (
-    <main style={{ padding: "2rem", maxWidth: "1100px", margin: "0 auto" }}>
+    <main style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
       <AdminTopbar />
 
       <h1 style={{ fontSize: "32px", fontWeight: 700, marginBottom: "8px" }}>
@@ -63,7 +64,7 @@ export default async function AdminTenantsPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1.5fr 1.5fr 1.5fr 180px",
+            gridTemplateColumns: "1.3fr 1.3fr 1.6fr 180px 140px",
             gap: "16px",
             padding: "16px 20px",
             borderBottom: "1px solid #E5E7EB",
@@ -76,6 +77,7 @@ export default async function AdminTenantsPage() {
           <div>Imię i nazwisko</div>
           <div>Aktywne mieszkanie</div>
           <div>Status</div>
+          <div>Szczegóły</div>
         </div>
 
         {(tenants ?? []).length === 0 ? (
@@ -96,7 +98,7 @@ export default async function AdminTenantsPage() {
                 key={tenant.id}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1.5fr 1.5fr 1.5fr 180px",
+                  gridTemplateColumns: "1.3fr 1.3fr 1.6fr 180px 140px",
                   gap: "16px",
                   padding: "16px 20px",
                   borderBottom: "1px solid #F1F5F9",
@@ -122,6 +124,18 @@ export default async function AdminTenantsPage() {
                   >
                     {apartment ? "Aktywny" : "Nieprzypisany"}
                   </span>
+                </div>
+                <div>
+                  <Link
+                    href={`/admin/najemcy/${tenant.id}`}
+                    style={{
+                      textDecoration: "none",
+                      color: "#0B5CAD",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Szczegóły
+                  </Link>
                 </div>
               </div>
             );
