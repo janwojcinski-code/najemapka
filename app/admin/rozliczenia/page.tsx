@@ -66,7 +66,7 @@ export default async function AdminSettlementsPage({
       : null;
 
   return (
-    <main style={{ padding: "2rem", maxWidth: "1100px", margin: "0 auto" }}>
+    <main style={{ padding: "2rem", maxWidth: "1180px", margin: "0 auto" }}>
       <AdminTopbar />
 
       <div
@@ -127,7 +127,7 @@ export default async function AdminSettlementsPage({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "80px 1.5fr 100px 100px 140px 140px 180px",
+            gridTemplateColumns: "80px 1.4fr 90px 90px 140px 140px 160px 160px",
             gap: "16px",
             padding: "16px 20px",
             borderBottom: "1px solid #E5E7EB",
@@ -142,6 +142,7 @@ export default async function AdminSettlementsPage({
           <div>Rok</div>
           <div>Status</div>
           <div>Kwota</div>
+          <div>Szczegóły</div>
           <div>Akcja</div>
         </div>
 
@@ -162,7 +163,7 @@ export default async function AdminSettlementsPage({
                 key={settlement.id}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "80px 1.5fr 100px 100px 140px 140px 180px",
+                  gridTemplateColumns: "80px 1.4fr 90px 90px 140px 140px 160px 160px",
                   gap: "16px",
                   padding: "16px 20px",
                   borderBottom: "1px solid #F1F5F9",
@@ -202,6 +203,19 @@ export default async function AdminSettlementsPage({
                 </div>
 
                 <div>
+                  <Link
+                    href={`/admin/rozliczenia/${settlement.id}`}
+                    style={{
+                      textDecoration: "none",
+                      color: "#0B5CAD",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Zobacz szczegóły
+                  </Link>
+                </div>
+
+                <div>
                   {!paid ? (
                     <form action={markSettlementPaid}>
                       <input type="hidden" name="id" value={settlement.id} />
@@ -217,7 +231,7 @@ export default async function AdminSettlementsPage({
                           cursor: "pointer",
                         }}
                       >
-                        Oznacz jako opłacone
+                        Oznacz opłacone
                       </button>
                     </form>
                   ) : (
