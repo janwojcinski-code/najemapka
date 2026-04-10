@@ -14,7 +14,7 @@ async function createTariff(formData: FormData) {
   const apartmentIdRaw = String(formData.get("apartment_id") || "").trim();
 
   if (!utilityType || !priceRaw || !effectiveFrom) {
-    redirect("/admin/taryfy/nowe?error=missing_fields");
+    redirect("/admin/taryfy/nowe?error=Uzupełnij wszystkie pola");
   }
 
   const price = Number(priceRaw);
@@ -29,7 +29,7 @@ async function createTariff(formData: FormData) {
   });
 
   if (error) {
-    redirect("/admin/taryfy/nowe?error=save_failed");
+    redirect(`/admin/taryfy/nowe?error=${encodeURIComponent(error.message)}`);
   }
 
   redirect("/admin/taryfy");
@@ -54,12 +54,7 @@ export default async function NewTariffPage({
     .order("id", { ascending: false });
 
   const params = (await searchParams) || {};
-  const error =
-    params.error === "missing_fields"
-      ? "Uzupełnij wszystkie pola."
-      : params.error === "save_failed"
-      ? "Nie udało się zapisać taryfy."
-      : null;
+  const error = params.error || null;
 
   return (
     <main style={{ padding: "2rem", maxWidth: "760px", margin: "0 auto" }}>
@@ -90,6 +85,7 @@ export default async function NewTariffPage({
               background: "#FEF2F2",
               color: "#B91C1C",
               border: "1px solid #FECACA",
+              whiteSpace: "pre-wrap",
             }}
           >
             {error}
