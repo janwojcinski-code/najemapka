@@ -15,11 +15,20 @@ export default async function AdminTariffsPage() {
 
   const { data: tariffs } = await supabase
     .from("utility_prices")
-    .select("*")
+    .select(
+      `
+      *,
+      apartments (
+        id,
+        name,
+        address
+      )
+    `
+    )
     .order("effective_from", { ascending: false });
 
   return (
-    <main style={{ padding: "2rem", maxWidth: "1150px", margin: "0 auto" }}>
+    <main style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
       <AdminTopbar />
 
       <div
@@ -35,7 +44,7 @@ export default async function AdminTariffsPage() {
             Taryfy i ceny
           </h1>
           <p style={{ margin: 0, color: "#667085" }}>
-            Zarządzaj stawkami dla mediów.
+            Zarządzaj stawkami globalnymi i przypisanymi do mieszkań.
           </p>
         </div>
 
@@ -65,7 +74,7 @@ export default async function AdminTariffsPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "180px 180px 180px 1fr 120px",
+            gridTemplateColumns: "160px 220px 180px 180px 1fr 120px",
             gap: "16px",
             padding: "16px 20px",
             borderBottom: "1px solid #E5E7EB",
@@ -75,6 +84,7 @@ export default async function AdminTariffsPage() {
           }}
         >
           <div>Medium</div>
+          <div>Zakres</div>
           <div>Stawka</div>
           <div>Obowiązuje od</div>
           <div>Status</div>
@@ -86,50 +96,61 @@ export default async function AdminTariffsPage() {
             Brak taryf.
           </div>
         ) : (
-          tariffs?.map((tariff: any) => (
-            <div
-              key={tariff.id}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "180px 180px 180px 1fr 120px",
-                gap: "16px",
-                padding: "16px 20px",
-                borderBottom: "1px solid #F1F5F9",
-                alignItems: "center",
-              }}
-            >
-              <div style={{ fontWeight: 600 }}>{tariff.utility_type || "—"}</div>
-              <div>{tariff.price_gross ?? tariff.price ?? "—"}</div>
-              <div>{tariff.effective_from || "—"}</div>
-              <div>
-                <span
-                  style={{
-                    display: "inline-block",
-                    padding: "6px 10px",
-                    borderRadius: "999px",
-                    background: "#DBEAFE",
-                    color: "#1D4ED8",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                  }}
-                >
-                  Aktywna / archiwalna wg dat
-                </span>
+          tariffs?.map((tariff: any) => {
+            const apartment = Array.isArray(tariff.apartments)
+              ? tariff.apartments[0]
+              : tariff.apartments;
+
+            return (
+              <div
+                key={tariff.id}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "160px 220px 180px 180px 1fr 120px",
+                  gap: "16px",
+                  padding: "16px 20px",
+                  borderBottom: "1px solid #F1F5F9",
+                  alignItems: "center",
+                }}
+              >
+                <div style={{ fontWeight: 600 }}>{tariff.utility_type || "—"}</div>
+                <div>
+                  {apartment
+                    ? `${apartment.name || "—"} — ${apartment.address || "—"}`
+                    : "Globalna"}
+                </div>
+                <div>{tariff.price_gross ?? tariff.price ?? "—"}</div>
+                <div>{tariff.effective_from || "—"}</div>
+                <div>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      padding: "6px 10px",
+                      borderRadius: "999px",
+                      background: apartment ? "#FEF3C7" : "#DBEAFE",
+                      color: apartment ? "#92400E" : "#1D4ED8",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {apartment ? "Per mieszkanie" : "Globalna"}
+                  </span>
+                </div>
+                <div>
+                  <Link
+                    href={`/admin/taryfy/${tariff.id}`}
+                    style={{
+                      textDecoration: "none",
+                      color: "#0B5CAD",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Edytuj
+                  </Link>
+                </div>
               </div>
-              <div>
-                <Link
-                  href={`/admin/taryfy/${tariff.id}`}
-                  style={{
-                    textDecoration: "none",
-                    color: "#0B5CAD",
-                    fontWeight: 600,
-                  }}
-                >
-                  Edytuj
-                </Link>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </main>
