@@ -5,7 +5,6 @@ import {
   getCurrentBillingDueDate,
   shouldSendReminder,
 } from "@/lib/billing/deadlines";
-// import { sendPaymentReminderEmail } from "@/lib/email/reminders";
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -71,36 +70,26 @@ export async function GET(request: Request) {
       .maybeSingle();
 
     if (existingReminder) {
-      results.push({ email: profile.email, status: "already_sent_today" });
+      results.push({ email: profile.email, status: "already_logged_today" });
       continue;
     }
 
-    try {
-      await sendPaymentReminderEmail({
-        to: profile.email,
-        tenantName: profile.full_name || profile.email,
-        dueDateText: formatPolishDate(dueDate),
-      });
+    const { error: insertError } = await supabase.from("payment_reminders").insert({
+      tenant_user_id: profile.id,
+      apartment_id: assignment.apartment_id,
+      reminder_type: "payment_due",
+      reminder_date: reminderDate,
+    });
 
-      const { error: insertError } = await supabase.from("payment_reminders").insert({
-        tenant_user_id: profile.id,
-        apartment_id: assignment.apartment_id,
-        reminder_type: "payment_due",
-        reminder_date: reminderDate,
-      });
-
-      if (insertError) {
-        results.push({
-          email: profile.email,
-          status: `email_sent_but_log_failed: ${insertError.message}`,
-        });
-      } else {
-        results.push({ email: profile.email, status: "sent" });
-      }
-    } catch (error: any) {
+    if (insertError) {
       results.push({
         email: profile.email,
-        status: `send_failed: ${error.message}`,
+        status: `log_failed: ${insertError.message}`,
+      });
+    } else {
+      results.push({
+        email: profile.email,
+        status: `logged_only_due_${formatPolishDate(dueDate)}`,
       });
     }
   }
