@@ -5,7 +5,7 @@ import {
   getCurrentBillingDueDate,
   shouldSendReminder,
 } from "@/lib/billing/deadlines";
-import { sendPaymentReminderEmail } from "@/lib/email/reminders";
+// import { sendPaymentReminderEmail } from "@/lib/email/reminders";
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
