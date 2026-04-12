@@ -16,6 +16,9 @@ export default async function TenantDashboardPage() {
   }
 
   const supabase = await createClient();
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
 
   const { data: assignment } = await supabase
     .from("tenant_assignments")
@@ -41,7 +44,7 @@ export default async function TenantDashboardPage() {
       : assignment.apartments
     : null;
 
-  const [readingsRes, settlementsRes] = assignment
+  const [readingsRes, settlementsRes, advanceRes, rentRes] = assignment
     ? await Promise.all([
         supabase
           .from("meter_readings")
@@ -49,6 +52,7 @@ export default async function TenantDashboardPage() {
           .eq("apartment_id", assignment.apartment_id)
           .order("reading_date", { ascending: false })
           .limit(1),
+
         supabase
           .from("settlements")
           .select("*")
@@ -56,11 +60,29 @@ export default async function TenantDashboardPage() {
           .order("year", { ascending: false })
           .order("month", { ascending: false })
           .limit(1),
+
+        supabase
+          .from("monthly_advances")
+          .select("*")
+          .eq("apartment_id", assignment.apartment_id)
+          .eq("month", currentMonth)
+          .eq("year", currentYear)
+          .maybeSingle(),
+
+        supabase
+          .from("monthly_rent")
+          .select("*")
+          .eq("apartment_id", assignment.apartment_id)
+          .eq("month", currentMonth)
+          .eq("year", currentYear)
+          .maybeSingle(),
       ])
-    : [{ data: [] }, { data: [] }];
+    : [{ data: [] }, { data: [] }, { data: null }, { data: null }];
 
   const lastReading = readingsRes.data?.[0];
   const lastSettlement = settlementsRes.data?.[0];
+  const currentAdvance = advanceRes.data;
+  const currentRent = rentRes.data;
 
   const deadline = getTenantDeadlineState();
 
@@ -68,6 +90,10 @@ export default async function TenantDashboardPage() {
     profile.full_name?.trim()?.split(" ")[0] ||
     profile.email?.split("@")[0] ||
     "Użytkowniku";
+
+  const advanceAmount = Number(currentAdvance?.amount ?? 0);
+  const settlementAmount = Number(lastSettlement?.total_amount ?? 0);
+  const mediaBalance = Math.max(settlementAmount - advanceAmount, 0);
 
   return (
     <main style={{ padding: "2rem", maxWidth: "800px", margin: "0 auto" }}>
@@ -133,6 +159,46 @@ export default async function TenantDashboardPage() {
         </div>
       )}
 
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "16px",
+          marginBottom: "1.5rem",
+        }}
+      >
+        <Box
+          title="Zaliczka na media"
+          value={`${advanceAmount.toFixed(2)} zł`}
+          subtitle={`${currentMonth}/${currentYear}`}
+        />
+        <Box
+          title="Saldo mediów po zaliczce"
+          value={`${mediaBalance.toFixed(2)} zł`}
+          subtitle="Ostatnie rozliczenie minus bieżąca zaliczka"
+        />
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "16px",
+          marginBottom: "1.5rem",
+        }}
+      >
+        <Box
+          title="Czynsz"
+          value={`${Number(currentRent?.amount ?? 0).toFixed(2)} zł`}
+          subtitle={`${currentMonth}/${currentYear}`}
+        />
+        <Box
+          title="Status czynszu"
+          value={currentRent?.status === "paid" ? "Opłacony" : "Nieopłacony"}
+          subtitle="Ustalane przez administratora"
+        />
+      </div>
+
       {lastReading && (
         <div
           style={{
@@ -170,7 +236,7 @@ export default async function TenantDashboardPage() {
           </div>
 
           <div style={{ fontSize: "22px", fontWeight: 700 }}>
-            {lastSettlement.total_amount?.toFixed(2)} zł
+            {settlementAmount.toFixed(2)} zł
           </div>
 
           <div style={{ color: "#666" }}>
@@ -183,5 +249,32 @@ export default async function TenantDashboardPage() {
         </div>
       )}
     </main>
+  );
+}
+
+function Box({
+  title,
+  value,
+  subtitle,
+}: {
+  title: string;
+  value: string;
+  subtitle: string;
+}) {
+  return (
+    <div
+      style={{
+        padding: "1rem",
+        border: "1px solid #eee",
+        borderRadius: "12px",
+        background: "white",
+      }}
+    >
+      <div style={{ fontWeight: 600, marginBottom: "8px" }}>{title}</div>
+      <div style={{ fontSize: "22px", fontWeight: 700 }}>{value}</div>
+      <div style={{ marginTop: "8px", color: "#666", fontSize: "14px" }}>
+        {subtitle}
+      </div>
+    </div>
   );
 }
