@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAuthenticatedProfile } from "@/lib/auth/user";
 import { getAdminDashboardData } from "@/lib/data/admin";
+import { createClient } from "@/lib/supabase/server";
 import AdminTopbar from "@/components/admin-topbar";
 
 export default async function AdminDashboardPage() {
@@ -12,6 +13,37 @@ export default async function AdminDashboardPage() {
   }
 
   const data = await getAdminDashboardData();
+  const supabase = await createClient();
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+
+  const [{ data: advances }, { data: rents }] = await Promise.all([
+    supabase
+      .from("monthly_advances")
+      .select("amount")
+      .eq("month", currentMonth)
+      .eq("year", currentYear),
+    supabase
+      .from("monthly_rent")
+      .select("amount, status")
+      .eq("month", currentMonth)
+      .eq("year", currentYear),
+  ]);
+
+  const advancesTotal = (advances ?? []).reduce(
+    (sum: number, item: any) => sum + Number(item.amount ?? 0),
+    0
+  );
+
+  const rentTotal = (rents ?? []).reduce(
+    (sum: number, item: any) => sum + Number(item.amount ?? 0),
+    0
+  );
+
+  const paidRentTotal = (rents ?? [])
+    .filter((item: any) => item.status === "paid")
+    .reduce((sum: number, item: any) => sum + Number(item.amount ?? 0), 0);
 
   return (
     <main style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
@@ -29,115 +61,92 @@ export default async function AdminDashboardPage() {
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
           gap: "12px",
-          marginBottom: "2rem",
+          marginBottom: "1.5rem",
         }}
       >
         <StatCard label="Aktywne mieszkania" value={data.apartmentsCount} />
-        <StatCard
-          label="Aktywne przypisania"
-          value={data.activeAssignmentsCount}
+        <StatCard label="Aktywne przypisania" value={data.activeAssignmentsCount} />
+        <StatCard label="Braki odczytów" value={data.pendingReadingsCount} accent="danger" />
+        <StatCard label="Oczekujące rozliczenia" value={data.pendingSettlementsCount} accent="warning" />
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "12px",
+          marginBottom: "2rem",
+        }}
+      >
+        <MoneyCard
+          label={`Zaliczki ${currentMonth}/${currentYear}`}
+          value={`${advancesTotal.toFixed(2)} zł`}
         />
-        <StatCard
-          label="Braki odczytów"
-          value={data.pendingReadingsCount}
-          accent="danger"
+        <MoneyCard
+          label={`Czynsz razem ${currentMonth}/${currentYear}`}
+          value={`${rentTotal.toFixed(2)} zł`}
         />
-        <StatCard
-          label="Oczekujące rozliczenia"
-          value={data.pendingSettlementsCount}
-          accent="warning"
+        <MoneyCard
+          label={`Czynsz opłacony ${currentMonth}/${currentYear}`}
+          value={`${paidRentTotal.toFixed(2)} zł`}
         />
       </div>
 
       <div style={{ marginBottom: "24px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
         <a
           href="/admin/mieszkania"
-          style={{
-            display: "inline-block",
-            background: "#0B5CAD",
-            color: "white",
-            textDecoration: "none",
-            padding: "12px 18px",
-            borderRadius: "999px",
-            fontWeight: 600,
-          }}
+          style={buttonStyle("#0B5CAD")}
         >
-          Przejdź do mieszkań
+          Mieszkania
         </a>
 
         <a
           href="/admin/przypisania"
-          style={{
-            display: "inline-block",
-            background: "#111827",
-            color: "white",
-            textDecoration: "none",
-            padding: "12px 18px",
-            borderRadius: "999px",
-            fontWeight: 600,
-          }}
+          style={buttonStyle("#111827")}
         >
-          Przejdź do przypisań
+          Przypisania
         </a>
 
         <a
           href="/admin/rozliczenia"
-          style={{
-            display: "inline-block",
-            background: "#7C3AED",
-            color: "white",
-            textDecoration: "none",
-            padding: "12px 18px",
-            borderRadius: "999px",
-            fontWeight: 600,
-          }}
+          style={buttonStyle("#7C3AED")}
         >
-          Przejdź do rozliczeń
+          Rozliczenia
         </a>
 
         <a
           href="/admin/taryfy"
-          style={{
-            display: "inline-block",
-            background: "#059669",
-            color: "white",
-            textDecoration: "none",
-            padding: "12px 18px",
-            borderRadius: "999px",
-            fontWeight: 600,
-          }}
+          style={buttonStyle("#059669")}
         >
-          Przejdź do taryf
+          Taryfy
         </a>
 
         <a
           href="/admin/najemcy"
-          style={{
-            display: "inline-block",
-            background: "#EA580C",
-            color: "white",
-            textDecoration: "none",
-            padding: "12px 18px",
-            borderRadius: "999px",
-            fontWeight: 600,
-          }}
+          style={buttonStyle("#EA580C")}
         >
-          Przejdź do najemców
+          Najemcy
         </a>
 
         <a
           href="/admin/odczyty"
-          style={{
-            display: "inline-block",
-            background: "#2563EB",
-            color: "white",
-            textDecoration: "none",
-            padding: "12px 18px",
-            borderRadius: "999px",
-            fontWeight: 600,
-          }}
+          style={buttonStyle("#2563EB")}
         >
-          Przejdź do odczytów
+          Odczyty
+        </a>
+
+        <a
+          href="/admin/zaliczki"
+          style={buttonStyle("#0F766E")}
+        >
+          Zaliczki
+        </a>
+
+        <a
+          href="/admin/czynsz"
+          style={buttonStyle("#B45309")}
+        >
+          Czynsz
         </a>
       </div>
 
@@ -241,4 +250,40 @@ function StatCard({
       </p>
     </div>
   );
+}
+
+function MoneyCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div
+      style={{
+        background: "white",
+        border: "1px solid #E5E7EB",
+        borderRadius: "16px",
+        padding: "16px",
+      }}
+    >
+      <div style={{ fontSize: "13px", color: "#667085", marginBottom: "6px" }}>
+        {label}
+      </div>
+      <div style={{ fontSize: "24px", fontWeight: 700 }}>{value}</div>
+    </div>
+  );
+}
+
+function buttonStyle(background: string) {
+  return {
+    display: "inline-block",
+    background,
+    color: "white",
+    textDecoration: "none",
+    padding: "12px 18px",
+    borderRadius: "999px",
+    fontWeight: 600,
+  } as const;
 }
