@@ -5,6 +5,7 @@ import {
   formatPolishDate,
   getTenantDeadlineState,
 } from "@/lib/billing/deadlines";
+import TenantTopbar from "@/components/tenant-topbar";
 
 export default async function TenantDashboardPage() {
   let profile;
@@ -22,6 +23,7 @@ export default async function TenantDashboardPage() {
       `
       id,
       apartment_id,
+      start_date,
       apartments (
         id,
         name,
@@ -63,16 +65,18 @@ export default async function TenantDashboardPage() {
   const deadline = getTenantDeadlineState();
 
   const firstName =
-    profile.full_name?.split(" ")[0] || profile.email;
+    profile.full_name?.trim()?.split(" ")[0] ||
+    profile.email?.split("@")[0] ||
+    "Użytkowniku";
 
   return (
     <main style={{ padding: "2rem", maxWidth: "800px", margin: "0 auto" }}>
-      {/* HEADER */}
-      <h1 style={{ fontSize: "22px", fontWeight: 500, marginBottom: "8px" }}>
+      <TenantTopbar />
+
+      <h1 style={{ fontSize: "32px", fontWeight: 700, marginBottom: "8px" }}>
         Witaj, {firstName}!
       </h1>
 
-      {/* TERMIN */}
       <div
         style={{
           background: "#fff5f5",
@@ -109,7 +113,6 @@ export default async function TenantDashboardPage() {
         )}
       </div>
 
-      {/* MIESZKANIE */}
       {apt && (
         <div
           style={{
@@ -117,14 +120,19 @@ export default async function TenantDashboardPage() {
             padding: "1rem",
             border: "1px solid #eee",
             borderRadius: "12px",
+            background: "white",
           }}
         >
           <div style={{ fontWeight: 600 }}>{apt.name}</div>
           <div style={{ color: "#666" }}>{apt.address}</div>
+          {assignment?.start_date && (
+            <div style={{ marginTop: "8px", color: "#888", fontSize: "14px" }}>
+              Data rozpoczęcia umowy: {assignment.start_date}
+            </div>
+          )}
         </div>
       )}
 
-      {/* OSTATNI ODCZYT */}
       {lastReading && (
         <div
           style={{
@@ -132,6 +140,7 @@ export default async function TenantDashboardPage() {
             padding: "1rem",
             border: "1px solid #eee",
             borderRadius: "12px",
+            background: "white",
           }}
         >
           <div style={{ fontWeight: 600, marginBottom: "8px" }}>
@@ -147,13 +156,13 @@ export default async function TenantDashboardPage() {
         </div>
       )}
 
-      {/* ROZLICZENIE */}
       {lastSettlement && (
         <div
           style={{
             padding: "1rem",
             border: "1px solid #eee",
             borderRadius: "12px",
+            background: "white",
           }}
         >
           <div style={{ fontWeight: 600, marginBottom: "8px" }}>
