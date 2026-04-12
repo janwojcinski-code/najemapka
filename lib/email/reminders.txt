@@ -1,0 +1,37 @@
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+export async function sendPaymentReminderEmail({
+  to,
+  tenantName,
+  dueDateText,
+}: {
+  to: string;
+  tenantName: string;
+  dueDateText: string;
+}) {
+  const subject = "Przypomnienie o płatności za media";
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+      <h2>Przypomnienie o płatności</h2>
+      <p>Dzień dobry ${tenantName},</p>
+      <p>przypominamy o płatności za media.</p>
+      <p>Termin płatności upłynął: <strong>${dueDateText}</strong>.</p>
+      <p>Prosimy o uregulowanie należności w najbliższym możliwym terminie.</p>
+      <p>Pozdrawiamy,<br/>Media pod kontrolą</p>
+    </div>
+  `;
+
+  const { error } = await resend.emails.send({
+    from: process.env.REMINDER_FROM_EMAIL || "Media pod kontrolą <onboarding@resend.dev>",
+    to: [to],
+    subject,
+    html,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
