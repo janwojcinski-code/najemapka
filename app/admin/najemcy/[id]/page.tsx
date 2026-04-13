@@ -54,12 +54,26 @@ export default async function TenantDetailsPage({
     <main style={{ padding: "2rem", maxWidth: "950px", margin: "0 auto" }}>
       <AdminTopbar />
 
-      <div style={{ marginBottom: "16px" }}>
+      <div style={{ marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <Link
           href="/admin/najemcy"
           style={{ textDecoration: "none", color: "#0B5CAD", fontWeight: 600 }}
         >
           ← Wróć do najemców
+        </Link>
+
+        <Link
+          href={`/admin/najemcy/${tenant.id}/edytuj`}
+          style={{
+            textDecoration: "none",
+            color: "white",
+            background: "#0B5CAD",
+            padding: "10px 14px",
+            borderRadius: "999px",
+            fontWeight: 600,
+          }}
+        >
+          Edytuj najemcę
         </Link>
       </div>
 
