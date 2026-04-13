@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { logout } from "@/lib/actions/logout";
+import { logout } from "@/app/actions/logout";
+
 export default function AdminTopbar() {
   return (
     <div
@@ -7,33 +8,36 @@ export default function AdminTopbar() {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        padding: "16px 0 24px",
-        borderBottom: "1px solid #E5E7EB",
         marginBottom: "24px",
+        gap: "16px",
         flexWrap: "wrap",
-        gap: "12px",
       }}
     >
-      <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-        <Link href="/admin/dashboard" style={linkStyle}>
-          Dashboard
-        </Link>
-        <Link href="/admin/mieszkania" style={linkStyle}>
-          Mieszkania
-        </Link>
-        <Link href="/admin/przypisania" style={linkStyle}>
-          Przypisania
-        </Link>
-        <Link href="/admin/rozliczenia" style={linkStyle}>
-          Rozliczenia
-        </Link>
-        <Link href="/admin/taryfy" style={linkStyle}>
-          Taryfy
-        </Link>
-      </div>
+      <nav style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+        <NavLink href="/admin/dashboard" label="Dashboard" />
+        <NavLink href="/admin/mieszkania" label="Mieszkania" />
+        <NavLink href="/admin/przypisania" label="Przypisania" />
+        <NavLink href="/admin/rozliczenia" label="Rozliczenia" />
+        <NavLink href="/admin/taryfy" label="Taryfy" />
+        <NavLink href="/admin/czynsz" label="Czynsz" />
+        <NavLink href="/admin/zaliczki" label="Zaliczki" />
+        <NavLink href="/admin/faktury" label="Faktury" />
+        <NavLink href="/admin/najemcy" label="Najemcy" />
+      </nav>
 
       <form action={logout}>
-        <button type="submit" style={buttonStyle}>
+        <button
+          type="submit"
+          style={{
+            background: "#0F172A",
+            color: "white",
+            border: "none",
+            borderRadius: "999px",
+            padding: "12px 18px",
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
           Wyloguj
         </button>
       </form>
@@ -41,23 +45,21 @@ export default function AdminTopbar() {
   );
 }
 
-const linkStyle: React.CSSProperties = {
-  textDecoration: "none",
-  color: "#111827",
-  padding: "10px 14px",
-  borderRadius: "999px",
-  background: "#F3F4F6",
-  fontWeight: 600,
-  fontSize: "14px",
-};
-
-const buttonStyle: React.CSSProperties = {
-  background: "#111827",
-  color: "white",
-  border: "none",
-  borderRadius: "999px",
-  padding: "10px 14px",
-  fontWeight: 600,
-  cursor: "pointer",
-  fontSize: "14px",
-};
+function NavLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      style={{
+        textDecoration: "none",
+        color: "#111827",
+        background: "white",
+        border: "1px solid #E5E7EB",
+        borderRadius: "999px",
+        padding: "12px 18px",
+        fontWeight: 700,
+      }}
+    >
+      {label}
+    </Link>
+  );
+}
