@@ -46,12 +46,23 @@ export default async function AdminTenantsPage() {
     <main style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
       <AdminTopbar />
 
-      <h1 style={{ fontSize: "32px", fontWeight: 700, marginBottom: "8px" }}>
-        Najemcy
-      </h1>
-      <p style={{ margin: "0 0 24px", color: "#667085" }}>
-        Lista użytkowników z rolą najemcy i ich aktywne przypisania.
-      </p>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "1.5rem",
+        }}
+      >
+        <div>
+          <h1 style={{ fontSize: "32px", fontWeight: 700, marginBottom: "8px" }}>
+            Najemcy
+          </h1>
+          <p style={{ margin: 0, color: "#667085" }}>
+            Lista użytkowników z rolą najemcy i ich aktywne przypisania.
+          </p>
+        </div>
+      </div>
 
       <div
         style={{
@@ -64,7 +75,7 @@ export default async function AdminTenantsPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1.3fr 1.3fr 1.6fr 180px 140px",
+            gridTemplateColumns: "1.3fr 1.3fr 1.6fr 180px 140px 120px",
             gap: "16px",
             padding: "16px 20px",
             borderBottom: "1px solid #E5E7EB",
@@ -78,6 +89,7 @@ export default async function AdminTenantsPage() {
           <div>Aktywne mieszkanie</div>
           <div>Status</div>
           <div>Szczegóły</div>
+          <div>Edycja</div>
         </div>
 
         {(tenants ?? []).length === 0 ? (
@@ -98,7 +110,7 @@ export default async function AdminTenantsPage() {
                 key={tenant.id}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1.3fr 1.3fr 1.6fr 180px 140px",
+                  gridTemplateColumns: "1.3fr 1.3fr 1.6fr 180px 140px 120px",
                   gap: "16px",
                   padding: "16px 20px",
                   borderBottom: "1px solid #F1F5F9",
@@ -135,6 +147,18 @@ export default async function AdminTenantsPage() {
                     }}
                   >
                     Szczegóły
+                  </Link>
+                </div>
+                <div>
+                  <Link
+                    href={`/admin/najemcy/${tenant.id}/edytuj`}
+                    style={{
+                      textDecoration: "none",
+                      color: "#0B5CAD",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Edytuj
                   </Link>
                 </div>
               </div>
