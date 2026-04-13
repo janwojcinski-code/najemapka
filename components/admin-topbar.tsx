@@ -23,6 +23,8 @@ export default function AdminTopbar() {
         <NavLink href="/admin/zaliczki" label="Zaliczki" />
         <NavLink href="/admin/faktury" label="Faktury" />
         <NavLink href="/admin/najemcy" label="Najemcy" />
+        <NavLink href="/admin/zaleglosci" label="Zaległości" />
+        <NavLink href="/api/export" label="Export CSV" />
       </nav>
 
       <form action={logout}>
