@@ -104,6 +104,9 @@ export default async function AdminInvoicesPage({
       .order("created_at", { ascending: false }),
   ]);
 
+  const safeApartments = apartments ?? [];
+  const safeInvoices = invoices ?? [];
+
   const params = (await searchParams) || {};
   const error = params.error || null;
 
@@ -160,7 +163,7 @@ export default async function AdminInvoicesPage({
               <option value="" disabled>
                 Wybierz mieszkanie
               </option>
-              {(apartments ?? []).map((apartment) => (
+              {safeApartments.map((apartment) => (
                 <option key={apartment.id} value={apartment.id}>
                   {apartment.name || `Mieszkanie ${apartment.id}`} — {apartment.address}
                 </option>
@@ -259,12 +262,12 @@ export default async function AdminInvoicesPage({
           <div>Akcja</div>
         </div>
 
-        {(invoices ?? []).length === 0 ? (
+        {safeInvoices.length === 0 ? (
           <div style={{ padding: "24px 20px", color: "#667085" }}>
             Brak faktur.
           </div>
         ) : (
-          invoices.map((invoice: any) => {
+          safeInvoices.map((invoice: any) => {
             const apartment = Array.isArray(invoice.apartments)
               ? invoice.apartments[0]
               : invoice.apartments;
