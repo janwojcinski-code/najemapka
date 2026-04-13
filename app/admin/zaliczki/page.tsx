@@ -101,6 +101,9 @@ export default async function AdminAdvancesPage({
       .order("month", { ascending: false }),
   ]);
 
+  const safeApartments = apartments ?? [];
+  const safeAdvances = advances ?? [];
+
   const params = (await searchParams) || {};
   const error = params.error || null;
 
@@ -156,7 +159,7 @@ export default async function AdminAdvancesPage({
               <option value="" disabled>
                 Wybierz mieszkanie
               </option>
-              {(apartments ?? []).map((apartment) => (
+              {safeApartments.map((apartment) => (
                 <option key={apartment.id} value={apartment.id}>
                   {apartment.name || `Mieszkanie ${apartment.id}`} — {apartment.address}
                 </option>
@@ -242,12 +245,12 @@ export default async function AdminAdvancesPage({
           <div>Akcja</div>
         </div>
 
-        {(advances ?? []).length === 0 ? (
+        {safeAdvances.length === 0 ? (
           <div style={{ padding: "24px 20px", color: "#667085" }}>
             Brak zaliczek.
           </div>
         ) : (
-          advances.map((advance: any) => {
+          safeAdvances.map((advance: any) => {
             const apartment = Array.isArray(advance.apartments)
               ? advance.apartments[0]
               : advance.apartments;
