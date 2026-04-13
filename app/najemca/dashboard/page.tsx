@@ -22,10 +22,14 @@ function getDeadlineStatus() {
     (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
   );
 
-  if (diff < 0) return { label: `Po terminie o ${Math.abs(diff)} dni`, color: "#B91C1C" };
-  if (diff <= 3) return { label: `Zostało ${diff} dni`, color: "#EA580C" };
+  if (diff < 0) {
+    return { label: `Po terminie o ${Math.abs(diff)} dni`, color: "#B91C1C" };
+  }
+  if (diff <= 3) {
+    return { label: `Zostało ${diff} dni`, color: "#EA580C" };
+  }
 
-  return { label: `Termin: 10`, color: "#059669" };
+  return { label: "Termin: 10", color: "#059669" };
 }
 
 export default async function TenantDashboardPage() {
@@ -40,18 +44,42 @@ export default async function TenantDashboardPage() {
 
   const { data: assignment } = await supabase
     .from("tenant_assignments")
-    .select(`
+    .select(
+      `
       id,
       apartment_id,
       start_date,
-      apartments ( id, name, address )
-    `)
+      apartments (
+        id,
+        name,
+        address
+      )
+    `
+    )
     .eq("tenant_user_id", profile.id)
     .is("end_date", null)
     .single();
 
   if (!assignment) {
-    return <div>Brak przypisanego mieszkania</div>;
+    return (
+      <main style={{ padding: "2rem", maxWidth: "900px", margin: "0 auto" }}>
+        <TenantTopbar />
+        <h1 style={{ fontSize: "32px", fontWeight: 700 }}>
+          Witaj, {getDisplayName(profile)}!
+        </h1>
+        <div
+          style={{
+            marginTop: "24px",
+            padding: "16px",
+            border: "1px solid #E5E7EB",
+            borderRadius: "12px",
+            background: "white",
+          }}
+        >
+          Brak przypisanego mieszkania.
+        </div>
+      </main>
+    );
   }
 
   const apartment = Array.isArray(assignment.apartments)
@@ -94,67 +122,71 @@ export default async function TenantDashboardPage() {
   const advanceAmount = Number(advance?.amount || 0);
 
   const invoicesSum = invoices.reduce(
-    (sum: number, i: any) => sum + Number(i.amount),
+    (sum: number, i: any) => sum + Number(i.amount || 0),
     0
   );
 
   const totalToPay = rentAmount + invoicesSum - advanceAmount;
 
   const deadline = getDeadlineStatus();
+  const displayName = getDisplayName(profile);
 
   return (
     <main style={{ padding: "2rem", maxWidth: "900px", margin: "0 auto" }}>
       <TenantTopbar />
 
       <h1 style={{ fontSize: "32px", fontWeight: 700 }}>
-        Witaj, {getDisplayName(profile)}!
+        Witaj, {displayName}!
       </h1>
 
-      {/* TERMIN */}
-      <div style={{
-        marginTop: "16px",
-        padding: "12px",
-        borderRadius: "12px",
-        background: "#F8FAFC",
-        border: "1px solid #E5E7EB"
-      }}>
+      <div
+        style={{
+          marginTop: "16px",
+          padding: "12px",
+          borderRadius: "12px",
+          background: "#F8FAFC",
+          border: "1px solid #E5E7EB",
+        }}
+      >
         <strong>Termin płatności:</strong>{" "}
         <span style={{ color: deadline.color }}>{deadline.label}</span>
       </div>
 
-      {/* MIESZKANIE */}
       <div style={{ marginTop: "24px" }}>
         <h3>{apartment?.name}</h3>
         <p>{apartment?.address}</p>
-        <small>
-          Umowa od: {assignment.start_date || "—"}
-        </small>
+        <small>Umowa od: {assignment.start_date || "—"}</small>
       </div>
 
-      {/* FINANSE */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: "16px",
-        marginTop: "24px"
-      }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "16px",
+          marginTop: "24px",
+        }}
+      >
         <Box title="Czynsz" value={`${rentAmount.toFixed(2)} zł`} />
         <Box title="Zaliczka" value={`${advanceAmount.toFixed(2)} zł`} />
         <Box title="Faktury (prąd/gaz)" value={`${invoicesSum.toFixed(2)} zł`} />
         <Box title="Do zapłaty" value={`${totalToPay.toFixed(2)} zł`} highlight />
       </div>
 
-      {/* FAKTURY */}
       {invoices.length > 0 && (
         <div style={{ marginTop: "32px" }}>
           <h3>Faktury</h3>
 
           {invoices.map((inv: any) => (
-            <div key={inv.id} style={{
-              padding: "12px",
-              borderBottom: "1px solid #eee"
-            }}>
-              {inv.utility_type} — {inv.amount} zł — {inv.status}
+            <div
+              key={inv.id}
+              style={{
+                padding: "12px",
+                borderBottom: "1px solid #eee",
+                background: "white",
+              }}
+            >
+              {inv.utility_type} — {Number(inv.amount || 0).toFixed(2)} zł —{" "}
+              {inv.status}
             </div>
           ))}
         </div>
@@ -173,12 +205,14 @@ function Box({
   highlight?: boolean;
 }) {
   return (
-    <div style={{
-      padding: "16px",
-      border: "1px solid #E5E7EB",
-      borderRadius: "12px",
-      background: highlight ? "#EEF2FF" : "white"
-    }}>
+    <div
+      style={{
+        padding: "16px",
+        border: "1px solid #E5E7EB",
+        borderRadius: "12px",
+        background: highlight ? "#EEF2FF" : "white",
+      }}
+    >
       <div style={{ fontSize: "14px", color: "#667085" }}>{title}</div>
       <div style={{ fontSize: "22px", fontWeight: 700 }}>{value}</div>
     </div>
