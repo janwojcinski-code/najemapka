@@ -101,6 +101,9 @@ export default async function AdminRentPage({
       .order("month", { ascending: false }),
   ]);
 
+  const safeApartments = apartments ?? [];
+  const safeRentItems = rentItems ?? [];
+
   const params = (await searchParams) || {};
   const error = params.error || null;
 
@@ -156,7 +159,7 @@ export default async function AdminRentPage({
               <option value="" disabled>
                 Wybierz mieszkanie
               </option>
-              {(apartments ?? []).map((apartment) => (
+              {safeApartments.map((apartment) => (
                 <option key={apartment.id} value={apartment.id}>
                   {apartment.name || `Mieszkanie ${apartment.id}`} — {apartment.address}
                 </option>
@@ -242,12 +245,12 @@ export default async function AdminRentPage({
           <div>Akcja</div>
         </div>
 
-        {(rentItems ?? []).length === 0 ? (
+        {safeRentItems.length === 0 ? (
           <div style={{ padding: "24px 20px", color: "#667085" }}>
             Brak zapisanych czynszów.
           </div>
         ) : (
-          rentItems.map((rent: any) => {
+          safeRentItems.map((rent: any) => {
             const apartment = Array.isArray(rent.apartments)
               ? rent.apartments[0]
               : rent.apartments;
