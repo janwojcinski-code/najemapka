@@ -6,46 +6,84 @@ import AdminTopbar from "@/components/admin-topbar";
 async function addInvoice(formData: FormData) {
   "use server";
 
+  try {
+    await requireAuthenticatedProfile(["admin"]);
+  } catch {
+    redirect("/logowanie");
+  }
+
   const supabase = await createClient();
 
   const apartmentId = Number(formData.get("apartment_id"));
-  const utilityType = String(formData.get("utility_type") || "");
+  const utilityType = String(formData.get("utility_type") || "").trim();
   const amount = Number(formData.get("amount"));
   const month = Number(formData.get("month"));
   const year = Number(formData.get("year"));
-  const note = String(formData.get("note") || "");
+  const note = String(formData.get("note") || "").trim();
 
-  if (!apartmentId || !utilityType || Number.isNaN(amount) || !month || !year) {
-    redirect("/admin/faktury?error=Uzupełnij wszystkie wymagane pola");
+  if (!apartmentId) {
+    redirect("/admin/faktury?error=Wybierz mieszkanie");
+  }
+
+  if (!utilityType) {
+    redirect("/admin/faktury?error=Wybierz typ faktury");
+  }
+
+  if (Number.isNaN(amount) || amount <= 0) {
+    redirect("/admin/faktury?error=Podaj poprawną kwotę");
+  }
+
+  if (Number.isNaN(month) || month < 1 || month > 12) {
+    redirect("/admin/faktury?error=Podaj poprawny miesiąc");
+  }
+
+  if (Number.isNaN(year) || year < 2020 || year > 2100) {
+    redirect("/admin/faktury?error=Podaj poprawny rok");
   }
 
   const dueDate = new Date(year, month - 1, 10).toISOString().slice(0, 10);
 
-  const { error } = await supabase.from("utility_invoices").insert({
-    apartment_id: apartmentId,
-    utility_type: utilityType,
-    amount,
-    month,
-    year,
-    due_date: dueDate,
-    status: "unpaid",
-    note,
-  });
+  const { data, error } = await supabase
+    .from("utility_invoices")
+    .insert({
+      apartment_id: apartmentId,
+      utility_type: utilityType,
+      amount,
+      month,
+      year,
+      due_date: dueDate,
+      status: "unpaid",
+      note,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     redirect(`/admin/faktury?error=${encodeURIComponent(error.message)}`);
   }
 
-  redirect("/admin/faktury");
+  if (!data?.id) {
+    redirect("/admin/faktury?error=Faktura nie została zapisana");
+  }
+
+  redirect("/admin/faktury?success=1");
 }
 
 async function markInvoicePaid(formData: FormData) {
   "use server";
 
+  try {
+    await requireAuthenticatedProfile(["admin"]);
+  } catch {
+    redirect("/logowanie");
+  }
+
   const supabase = await createClient();
   const id = Number(formData.get("id"));
 
-  if (!id) redirect("/admin/faktury");
+  if (!id) {
+    redirect("/admin/faktury?error=Brak ID faktury");
+  }
 
   const { error } = await supabase
     .from("utility_invoices")
@@ -56,13 +94,13 @@ async function markInvoicePaid(formData: FormData) {
     redirect(`/admin/faktury?error=${encodeURIComponent(error.message)}`);
   }
 
-  redirect("/admin/faktury");
+  redirect("/admin/faktury?success=paid");
 }
 
 export default async function AdminInvoicesPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ error?: string }>;
+  searchParams?: Promise<{ error?: string; success?: string }>;
 }) {
   try {
     await requireAuthenticatedProfile(["admin"]);
@@ -79,6 +117,7 @@ export default async function AdminInvoicesPage({
       .select("id, name, address, is_active")
       .eq("is_active", true)
       .order("id", { ascending: false }),
+
     supabase
       .from("utility_invoices")
       .select(
@@ -92,6 +131,7 @@ export default async function AdminInvoicesPage({
         due_date,
         status,
         note,
+        created_at,
         apartments (
           id,
           name,
@@ -99,8 +139,6 @@ export default async function AdminInvoicesPage({
         )
       `
       )
-      .order("year", { ascending: false })
-      .order("month", { ascending: false })
       .order("created_at", { ascending: false }),
   ]);
 
@@ -109,6 +147,7 @@ export default async function AdminInvoicesPage({
 
   const params = (await searchParams) || {};
   const error = params.error || null;
+  const success = params.success || null;
 
   return (
     <main style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
@@ -121,6 +160,40 @@ export default async function AdminInvoicesPage({
         Dodawaj faktury za prąd i gaz oraz oznaczaj je jako opłacone.
       </p>
 
+      {error ? (
+        <div
+          style={{
+            marginBottom: "16px",
+            padding: "12px 14px",
+            borderRadius: "12px",
+            background: "#FEF2F2",
+            color: "#B91C1C",
+            border: "1px solid #FECACA",
+            fontWeight: 600,
+          }}
+        >
+          {decodeURIComponent(error)}
+        </div>
+      ) : null}
+
+      {success ? (
+        <div
+          style={{
+            marginBottom: "16px",
+            padding: "12px 14px",
+            borderRadius: "12px",
+            background: "#F0FDF4",
+            color: "#166534",
+            border: "1px solid #BBF7D0",
+            fontWeight: 600,
+          }}
+        >
+          {success === "paid"
+            ? "Faktura została oznaczona jako opłacona."
+            : "Faktura została poprawnie dodana."}
+        </div>
+      ) : null}
+
       <form
         action={addInvoice}
         style={{
@@ -131,21 +204,6 @@ export default async function AdminInvoicesPage({
           marginBottom: "24px",
         }}
       >
-        {error ? (
-          <div
-            style={{
-              marginBottom: "16px",
-              padding: "12px 14px",
-              borderRadius: "12px",
-              background: "#FEF2F2",
-              color: "#B91C1C",
-              border: "1px solid #FECACA",
-            }}
-          >
-            {error}
-          </div>
-        ) : null}
-
         <div style={{ display: "grid", gap: "16px", maxWidth: "680px" }}>
           <div>
             <label htmlFor="apartment_id" style={labelStyle}>
