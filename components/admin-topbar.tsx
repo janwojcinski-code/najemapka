@@ -1,9 +1,38 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { logout } from "@/app/actions/logout";
 
+type MenuKey = "tenants" | "finance" | "settings" | null;
+
 export default function AdminTopbar() {
+  const [openMenu, setOpenMenu] = useState<MenuKey>(null);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!wrapperRef.current) return;
+      if (!wrapperRef.current.contains(event.target as Node)) {
+        setOpenMenu(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  function toggleMenu(menu: Exclude<MenuKey, null>) {
+    setOpenMenu((prev) => (prev === menu ? null : menu));
+  }
+
+  function closeMenus() {
+    setOpenMenu(null);
+  }
+
   return (
     <div
+      ref={wrapperRef}
       style={{
         display: "flex",
         justifyContent: "space-between",
@@ -13,6 +42,8 @@ export default function AdminTopbar() {
         marginBottom: "28px",
         paddingBottom: "20px",
         borderBottom: "1px solid #E5E7EB",
+        position: "relative",
+        zIndex: 30,
       }}
     >
       <nav
@@ -23,25 +54,37 @@ export default function AdminTopbar() {
           alignItems: "center",
         }}
       >
-        <NavLink href="/admin/dashboard" label="Dashboard" />
-        <NavLink href="/admin/zaleglosci" label="Zaległości" />
+        <NavLink href="/admin/dashboard" label="Dashboard" onClick={closeMenus} />
+        <NavLink href="/admin/zaleglosci" label="Zaległości" onClick={closeMenus} />
 
-        <Dropdown label="Najemcy">
-          <DropdownLink href="/admin/najemcy" label="Lista najemców" />
-          <DropdownLink href="/admin/przypisania" label="Przypisania" />
+        <Dropdown
+          label="Najemcy"
+          isOpen={openMenu === "tenants"}
+          onToggle={() => toggleMenu("tenants")}
+        >
+          <DropdownLink href="/admin/najemcy" label="Lista najemców" onClick={closeMenus} />
+          <DropdownLink href="/admin/przypisania" label="Przypisania" onClick={closeMenus} />
         </Dropdown>
 
-        <Dropdown label="Finanse">
-          <DropdownLink href="/admin/czynsz" label="Czynsz" />
-          <DropdownLink href="/admin/zaliczki" label="Zaliczki" />
-          <DropdownLink href="/admin/faktury" label="Faktury" />
-          <DropdownLink href="/admin/rozliczenia" label="Rozliczenia" />
-          <DropdownLink href="/api/export" label="Export CSV" />
+        <Dropdown
+          label="Finanse"
+          isOpen={openMenu === "finance"}
+          onToggle={() => toggleMenu("finance")}
+        >
+          <DropdownLink href="/admin/czynsz" label="Czynsz" onClick={closeMenus} />
+          <DropdownLink href="/admin/zaliczki" label="Zaliczki" onClick={closeMenus} />
+          <DropdownLink href="/admin/faktury" label="Faktury" onClick={closeMenus} />
+          <DropdownLink href="/admin/rozliczenia" label="Rozliczenia" onClick={closeMenus} />
+          <DropdownLink href="/api/export" label="Export CSV" onClick={closeMenus} />
         </Dropdown>
 
-        <Dropdown label="Ustawienia">
-          <DropdownLink href="/admin/mieszkania" label="Mieszkania" />
-          <DropdownLink href="/admin/taryfy" label="Taryfy" />
+        <Dropdown
+          label="Ustawienia"
+          isOpen={openMenu === "settings"}
+          onToggle={() => toggleMenu("settings")}
+        >
+          <DropdownLink href="/admin/mieszkania" label="Mieszkania" onClick={closeMenus} />
+          <DropdownLink href="/admin/taryfy" label="Taryfy" onClick={closeMenus} />
         </Dropdown>
       </nav>
 
@@ -66,10 +109,19 @@ export default function AdminTopbar() {
   );
 }
 
-function NavLink({ href, label }: { href: string; label: string }) {
+function NavLink({
+  href,
+  label,
+  onClick,
+}: {
+  href: string;
+  label: string;
+  onClick?: () => void;
+}) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       style={{
         textDecoration: "none",
         color: "#111827",
@@ -88,21 +140,21 @@ function NavLink({ href, label }: { href: string; label: string }) {
 
 function Dropdown({
   label,
+  isOpen,
+  onToggle,
   children,
 }: {
   label: string;
+  isOpen: boolean;
+  onToggle: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <details
-      style={{
-        position: "relative",
-      }}
-    >
-      <summary
+    <div style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={onToggle}
         style={{
-          listStyle: "none",
-          cursor: "pointer",
           color: "#111827",
           background: "white",
           border: "1px solid #E5E7EB",
@@ -110,35 +162,47 @@ function Dropdown({
           padding: "12px 18px",
           fontWeight: 700,
           userSelect: "none",
+          cursor: "pointer",
         }}
       >
         {label} ▾
-      </summary>
+      </button>
 
-      <div
-        style={{
-          position: "absolute",
-          top: "52px",
-          left: 0,
-          minWidth: "220px",
-          background: "white",
-          border: "1px solid #E5E7EB",
-          borderRadius: "16px",
-          boxShadow: "0 18px 40px rgba(15, 23, 42, 0.12)",
-          padding: "10px",
-          zIndex: 50,
-        }}
-      >
-        {children}
-      </div>
-    </details>
+      {isOpen ? (
+        <div
+          style={{
+            position: "absolute",
+            top: "52px",
+            left: 0,
+            minWidth: "230px",
+            background: "white",
+            border: "1px solid #E5E7EB",
+            borderRadius: "16px",
+            boxShadow: "0 18px 40px rgba(15, 23, 42, 0.12)",
+            padding: "10px",
+            zIndex: 60,
+          }}
+        >
+          {children}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
-function DropdownLink({ href, label }: { href: string; label: string }) {
+function DropdownLink({
+  href,
+  label,
+  onClick,
+}: {
+  href: string;
+  label: string;
+  onClick?: () => void;
+}) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       style={{
         display: "block",
         textDecoration: "none",
