@@ -1,7 +1,6 @@
-import { Compass } from "lucide-react";
 import ForgotPasswordForm from "@/components/forms/forgot-password-form";
 
-export default function ResetPasswordPage() {
+export default function ForgotPasswordPage() {
   return (
     <main
       style={{
@@ -23,22 +22,6 @@ export default function ResetPasswordPage() {
           padding: "34px",
         }}
       >
-        <div
-          style={{
-            width: "56px",
-            height: "56px",
-            borderRadius: "16px",
-            background: "linear-gradient(135deg, #0B5CAD 0%, #1D4ED8 100%)",
-            color: "white",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: "20px",
-          }}
-        >
-          <Compass size={26} />
-        </div>
-
         <h1
           style={{
             fontSize: "30px",
