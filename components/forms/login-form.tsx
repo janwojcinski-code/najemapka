@@ -8,9 +8,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   missing_profile:
     "Twój profil nie został jeszcze skonfigurowany. Skontaktuj się z administratorem.",
   invalid_credentials: "Nieprawidłowy email lub hasło.",
-  no_role:
-    "Twoje konto nie ma przypisanej roli. Skontaktuj się z administratorem.",
-  default: "Wystąpił błąd logowania. Spróbuj ponownie.",
+  no_role: "Konto nie ma przypisanej roli.",
+  default: "Nie udało się zalogować. Spróbuj ponownie.",
 };
 
 export default function LoginForm({
@@ -74,26 +73,31 @@ export default function LoginForm({
 
     if (profile.role === "admin") {
       router.push("/admin/dashboard");
-    } else if (profile.role === "tenant") {
-      router.push("/najemca/dashboard");
-    } else {
-      setError(ERROR_MESSAGES.no_role);
-      setLoading(false);
+      return;
     }
+
+    if (profile.role === "tenant") {
+      router.push("/najemca/dashboard");
+      return;
+    }
+
+    setError(ERROR_MESSAGES.no_role);
+    setLoading(false);
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ width: "100%" }}>
+    <form onSubmit={handleSubmit}>
       {error && (
         <div
           style={{
-            background: "var(--color-background-danger)",
-            color: "var(--color-text-danger)",
-            border: "0.5px solid var(--color-border-danger)",
-            borderRadius: "var(--border-radius-md)",
-            padding: "12px 16px",
-            marginBottom: "16px",
+            marginBottom: "18px",
+            padding: "14px 16px",
+            borderRadius: "14px",
+            background: "#FEF2F2",
+            color: "#B91C1C",
+            border: "1px solid #FECACA",
             fontSize: "14px",
+            fontWeight: 600,
           }}
         >
           {error}
@@ -105,9 +109,9 @@ export default function LoginForm({
           htmlFor="email"
           style={{
             display: "block",
-            fontSize: "14px",
-            marginBottom: "6px",
-            color: "var(--color-text-secondary)",
+            marginBottom: "8px",
+            fontWeight: 700,
+            color: "#111827",
           }}
         >
           Email
@@ -120,18 +124,18 @@ export default function LoginForm({
           placeholder="twoj@email.pl"
           required
           disabled={loading}
-          style={{ width: "100%" }}
+          style={inputStyle}
         />
       </div>
 
-      <div style={{ marginBottom: "24px" }}>
+      <div style={{ marginBottom: "22px" }}>
         <label
           htmlFor="password"
           style={{
             display: "block",
-            fontSize: "14px",
-            marginBottom: "6px",
-            color: "var(--color-text-secondary)",
+            marginBottom: "8px",
+            fontWeight: 700,
+            color: "#111827",
           }}
         >
           Hasło
@@ -144,13 +148,37 @@ export default function LoginForm({
           placeholder="••••••••"
           required
           disabled={loading}
-          style={{ width: "100%" }}
+          style={inputStyle}
         />
       </div>
 
-      <button type="submit" disabled={loading} style={{ width: "100%" }}>
-        {loading ? "Logowanie..." : "Zaloguj się →"}
+      <button
+        type="submit"
+        disabled={loading}
+        style={{
+          width: "100%",
+          background: "linear-gradient(135deg, #0B5CAD 0%, #1D4ED8 100%)",
+          color: "white",
+          border: "none",
+          borderRadius: "14px",
+          padding: "14px 18px",
+          fontWeight: 800,
+          fontSize: "16px",
+          cursor: "pointer",
+          boxShadow: "0 12px 24px rgba(29, 78, 216, 0.20)",
+        }}
+      >
+        {loading ? "Logowanie..." : "Zaloguj się"}
       </button>
     </form>
   );
 }
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "14px 16px",
+  borderRadius: "14px",
+  border: "1px solid #D0D5DD",
+  background: "white",
+  fontSize: "15px",
+};
