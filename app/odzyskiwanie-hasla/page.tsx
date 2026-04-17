@@ -1,7 +1,7 @@
-import Link from "next/link";
+import { Compass } from "lucide-react";
 import ForgotPasswordForm from "@/components/forms/forgot-password-form";
 
-export default function ForgotPasswordPage() {
+export default function ResetPasswordPage() {
   return (
     <main
       style={{
@@ -17,13 +17,28 @@ export default function ForgotPasswordPage() {
           width: "100%",
           maxWidth: "460px",
           background: "rgba(255,255,255,0.92)",
-          backdropFilter: "blur(10px)",
           border: "1px solid rgba(226, 232, 240, 0.9)",
           borderRadius: "28px",
           boxShadow: "0 28px 70px rgba(15, 23, 42, 0.10)",
           padding: "34px",
         }}
       >
+        <div
+          style={{
+            width: "56px",
+            height: "56px",
+            borderRadius: "16px",
+            background: "linear-gradient(135deg, #0B5CAD 0%, #1D4ED8 100%)",
+            color: "white",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: "20px",
+          }}
+        >
+          <Compass size={26} />
+        </div>
+
         <h1
           style={{
             fontSize: "30px",
@@ -46,19 +61,6 @@ export default function ForgotPasswordPage() {
         </p>
 
         <ForgotPasswordForm />
-
-        <div style={{ marginTop: "20px" }}>
-          <Link
-            href="/logowanie"
-            style={{
-              textDecoration: "none",
-              color: "#0B5CAD",
-              fontWeight: 700,
-            }}
-          >
-            ← Wróć do logowania
-          </Link>
-        </div>
       </div>
     </main>
   );
