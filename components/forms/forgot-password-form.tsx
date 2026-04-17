@@ -1,51 +1,105 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft, ArrowRight, Mail } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-const schema = z.object({
-  email: z.string().email("Podaj poprawny adres email.")
-});
-
-type FormValues = z.infer<typeof schema>;
-
-export function ForgotPasswordForm() {
+export default function ForgotPasswordForm() {
   const supabase = createClient();
-  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<FormValues>({
-    resolver: zodResolver(schema)
-  });
 
-  const onSubmit = async (values: FormValues) => {
-    await supabase.auth.resetPasswordForEmail(values.email, {
-      redirectTo: `${window.location.origin}/logowanie`
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [message, setMessage] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setStatus("loading");
+    setMessage("");
+
+    const redirectTo = `${window.location.origin}/ustaw-nowe-haslo`;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo,
     });
-    reset();
-    alert("Instrukcja resetu została wysłana.");
-  };
+
+    if (error) {
+      setStatus("error");
+      setMessage("Nie udało się wysłać linku resetującego.");
+      return;
+    }
+
+    setStatus("success");
+    setMessage("Jeśli konto istnieje, wysłaliśmy link do zmiany hasła.");
+  }
 
   return (
-    <form className="form-grid" onSubmit={handleSubmit(onSubmit)}>
-      <div className="field">
-        <label className="label">Adres email</label>
-        <Input icon={<Mail size={18} color="#7d8596" />} placeholder="twoj@email.pl" error={errors.email?.message} {...register("email")} />
+    <form onSubmit={handleSubmit}>
+      {message ? (
+        <div
+          style={{
+            marginBottom: "18px",
+            padding: "14px 16px",
+            borderRadius: "14px",
+            background: status === "success" ? "#F0FDF4" : "#FEF2F2",
+            color: status === "success" ? "#166534" : "#B91C1C",
+            border: status === "success" ? "1px solid #BBF7D0" : "1px solid #FECACA",
+            fontSize: "14px",
+            fontWeight: 600,
+          }}
+        >
+          {message}
+        </div>
+      ) : null}
+
+      <div style={{ marginBottom: "18px" }}>
+        <label
+          htmlFor="email"
+          style={{
+            display: "block",
+            marginBottom: "8px",
+            fontWeight: 700,
+            color: "#111827",
+          }}
+        >
+          Email
+        </label>
+        <input
+          id="email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="twoj@email.pl"
+          style={inputStyle}
+        />
       </div>
 
-      <Button type="submit" disabled={isSubmitting}>
-        Wyślij instrukcję <ArrowRight size={18} />
-      </Button>
-
-      <div style={{ textAlign: "center" }}>
-        <Link href="/logowanie" className="helper-link" style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-          <ArrowLeft size={16} />
-          Wróć do logowania
-        </Link>
-      </div>
+      <button
+        type="submit"
+        disabled={status === "loading"}
+        style={{
+          width: "100%",
+          background: "linear-gradient(135deg, #0B5CAD 0%, #1D4ED8 100%)",
+          color: "white",
+          border: "none",
+          borderRadius: "14px",
+          padding: "14px 18px",
+          fontWeight: 800,
+          fontSize: "16px",
+          cursor: "pointer",
+          boxShadow: "0 12px 24px rgba(29, 78, 216, 0.20)",
+        }}
+      >
+        {status === "loading" ? "Wysyłanie..." : "Wyślij link resetujący"}
+      </button>
     </form>
   );
 }
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "14px 16px",
+  borderRadius: "14px",
+  border: "1px solid #D0D5DD",
+  background: "white",
+  fontSize: "15px",
+};
