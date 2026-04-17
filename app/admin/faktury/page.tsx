@@ -114,38 +114,27 @@ export default async function AdminInvoicesPage({
   const supabase = await createClient();
   const now = new Date();
 
-  const [{ data: apartments }, { data: invoices, error: invoicesError }] = await Promise.all([
-    supabase
-      .from("apartments")
-      .select("id, name, address, is_active")
-      .eq("is_active", true)
-      .order("id", { ascending: false }),
+  const [{ data: apartments }, { data: invoices, error: invoicesError }] =
+    await Promise.all([
+      supabase
+        .from("apartments")
+        .select("id, name, address, is_active")
+        .eq("is_active", true)
+        .order("id", { ascending: false }),
 
-    supabase
-      .from("utility_invoices")
-      .select(
-        `
-        id,
-        apartment_id,
-        utility_type,
-        amount,
-        month,
-        year,
-        due_date,
-        status,
-        note,
-        apartments (
-          id,
-          name,
-          address
-        )
-      `
-      )
-      .order("id", { ascending: false }),
-  ]);
+      supabase
+        .from("utility_invoices")
+        .select("id, apartment_id, utility_type, amount, month, year, due_date, status, note, created_at")
+        .order("id", { ascending: false }),
+    ]);
 
   const safeApartments = apartments ?? [];
   const safeInvoices = invoices ?? [];
+
+  const apartmentMap = new Map<number, any>();
+  safeApartments.forEach((apartment) => {
+    apartmentMap.set(apartment.id, apartment);
+  });
 
   const params = (await searchParams) || {};
   const error = params.error || (invoicesError ? invoicesError.message : null);
@@ -337,9 +326,7 @@ export default async function AdminInvoicesPage({
           </div>
         ) : (
           safeInvoices.map((invoice: any) => {
-            const apartment = Array.isArray(invoice.apartments)
-              ? invoice.apartments[0]
-              : invoice.apartments;
+            const apartment = apartmentMap.get(invoice.apartment_id);
             const isPaid = invoice.status === "paid";
 
             return (
@@ -356,7 +343,7 @@ export default async function AdminInvoicesPage({
               >
                 <div>
                   <div style={{ fontWeight: 700 }}>
-                    {apartment?.name || "—"} — {invoice.utility_type}
+                    {(apartment?.name || `Mieszkanie ${invoice.apartment_id}`)} — {invoice.utility_type}
                   </div>
                   <div style={{ fontSize: "13px", color: "#667085" }}>
                     {apartment?.address || "—"}
