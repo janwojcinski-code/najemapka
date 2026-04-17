@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { redirect } from "next/navigation";
 import { requireAuthenticatedProfile } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
@@ -111,7 +114,7 @@ export default async function AdminInvoicesPage({
   const supabase = await createClient();
   const now = new Date();
 
-  const [{ data: apartments }, { data: invoices }] = await Promise.all([
+  const [{ data: apartments }, { data: invoices, error: invoicesError }] = await Promise.all([
     supabase
       .from("apartments")
       .select("id, name, address, is_active")
@@ -131,7 +134,6 @@ export default async function AdminInvoicesPage({
         due_date,
         status,
         note,
-        created_at,
         apartments (
           id,
           name,
@@ -139,14 +141,14 @@ export default async function AdminInvoicesPage({
         )
       `
       )
-      .order("created_at", { ascending: false }),
+      .order("id", { ascending: false }),
   ]);
 
   const safeApartments = apartments ?? [];
   const safeInvoices = invoices ?? [];
 
   const params = (await searchParams) || {};
-  const error = params.error || null;
+  const error = params.error || (invoicesError ? invoicesError.message : null);
   const success = params.success || null;
 
   return (
