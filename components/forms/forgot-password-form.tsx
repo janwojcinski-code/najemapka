@@ -12,6 +12,13 @@ export default function ForgotPasswordForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!email) {
+      setStatus("error");
+      setMessage("Podaj adres email.");
+      return;
+    }
+
     setStatus("loading");
     setMessage("");
 
@@ -22,6 +29,7 @@ export default function ForgotPasswordForm() {
     });
 
     if (error) {
+      console.error(error);
       setStatus("error");
       setMessage("Nie udało się wysłać linku resetującego.");
       return;
@@ -33,6 +41,7 @@ export default function ForgotPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit}>
+      {/* komunikat */}
       {message ? (
         <div
           style={{
@@ -50,6 +59,7 @@ export default function ForgotPasswordForm() {
         </div>
       ) : null}
 
+      {/* email */}
       <div style={{ marginBottom: "18px" }}>
         <label
           htmlFor="email"
@@ -62,6 +72,7 @@ export default function ForgotPasswordForm() {
         >
           Email
         </label>
+
         <input
           id="email"
           type="email"
@@ -73,6 +84,7 @@ export default function ForgotPasswordForm() {
         />
       </div>
 
+      {/* button */}
       <button
         type="submit"
         disabled={status === "loading"}
@@ -87,6 +99,7 @@ export default function ForgotPasswordForm() {
           fontSize: "16px",
           cursor: "pointer",
           boxShadow: "0 12px 24px rgba(29, 78, 216, 0.20)",
+          opacity: status === "loading" ? 0.7 : 1,
         }}
       >
         {status === "loading" ? "Wysyłanie..." : "Wyślij link resetujący"}
