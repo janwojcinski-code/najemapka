@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireAuthenticatedProfile } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
 import AdminTopbar from "@/components/admin-topbar";
+import RentManagement from "@/components/admin/rent-management";
 
 async function saveRent(formData: FormData) {
   "use server";
@@ -29,6 +30,30 @@ async function saveRent(formData: FormData) {
       onConflict: "apartment_id,month,year",
     }
   );
+
+  if (error) {
+    redirect(`/admin/czynsz?error=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect("/admin/czynsz");
+}
+
+async function saveDefaultRent(formData: FormData) {
+  "use server";
+
+  const supabase = await createClient();
+
+  const apartmentId = Number(formData.get("apartment_id"));
+  const monthlyRentDefault = Number(formData.get("monthly_rent_default"));
+
+  if (!apartmentId || Number.isNaN(monthlyRentDefault)) {
+    redirect("/admin/czynsz?error=Nie udało się zapisać stawki domyślnej");
+  }
+
+  const { error } = await supabase
+    .from("apartments")
+    .update({ monthly_rent_default: monthlyRentDefault })
+    .eq("id", apartmentId);
 
   if (error) {
     redirect(`/admin/czynsz?error=${encodeURIComponent(error.message)}`);
@@ -77,7 +102,7 @@ export default async function AdminRentPage({
   const [{ data: apartments }, { data: rentItems }] = await Promise.all([
     supabase
       .from("apartments")
-      .select("id, name, address, is_active")
+      .select("id, name, address, is_active, monthly_rent_default")
       .eq("is_active", true)
       .order("id", { ascending: false }),
     supabase
@@ -115,107 +140,31 @@ export default async function AdminRentPage({
         Czynsz
       </h1>
       <p style={{ margin: "0 0 24px", color: "#667085" }}>
-        Dodawaj miesięczny czynsz i oznaczaj wpłaty.
+        Ustaw domyślne stawki czynszu per mieszkanie i księguj czynsz miesięczny.
       </p>
 
-      <form
-        action={saveRent}
-        style={{
-          background: "white",
-          border: "1px solid #E5E7EB",
-          borderRadius: "20px",
-          padding: "24px",
-          marginBottom: "24px",
-        }}
-      >
-        {error && (
-          <div
-            style={{
-              marginBottom: "16px",
-              padding: "12px 14px",
-              borderRadius: "12px",
-              background: "#FEF2F2",
-              color: "#B91C1C",
-              border: "1px solid #FECACA",
-            }}
-          >
-            {error}
-          </div>
-        )}
-
+      {error ? (
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "2fr 1fr 1fr 1fr",
-            gap: "16px",
-            alignItems: "end",
+            marginBottom: "16px",
+            padding: "12px 14px",
+            borderRadius: "12px",
+            background: "#FEF2F2",
+            color: "#B91C1C",
+            border: "1px solid #FECACA",
           }}
         >
-          <div>
-            <label htmlFor="apartment_id" style={labelStyle}>
-              Mieszkanie
-            </label>
-            <select id="apartment_id" name="apartment_id" defaultValue="" style={inputStyle}>
-              <option value="" disabled>
-                Wybierz mieszkanie
-              </option>
-              {safeApartments.map((apartment) => (
-                <option key={apartment.id} value={apartment.id}>
-                  {apartment.name || `Mieszkanie ${apartment.id}`} — {apartment.address}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="month" style={labelStyle}>
-              Miesiąc
-            </label>
-            <input
-              id="month"
-              name="month"
-              type="number"
-              min="1"
-              max="12"
-              defaultValue={now.getMonth() + 1}
-              style={inputStyle}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="year" style={labelStyle}>
-              Rok
-            </label>
-            <input
-              id="year"
-              name="year"
-              type="number"
-              defaultValue={now.getFullYear()}
-              style={inputStyle}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="amount" style={labelStyle}>
-              Kwota czynszu
-            </label>
-            <input
-              id="amount"
-              name="amount"
-              type="number"
-              step="0.01"
-              placeholder="np. 1800.00"
-              style={inputStyle}
-            />
-          </div>
+          {error}
         </div>
+      ) : null}
 
-        <div style={{ marginTop: "16px" }}>
-          <button type="submit" style={primaryButtonStyle}>
-            Zapisz czynsz
-          </button>
-        </div>
-      </form>
+      <RentManagement
+        apartments={safeApartments}
+        currentMonth={now.getMonth() + 1}
+        currentYear={now.getFullYear()}
+        saveRentAction={saveRent}
+        saveDefaultRentAction={saveDefaultRent}
+      />
 
       <section
         style={{
@@ -319,29 +268,6 @@ export default async function AdminRentPage({
     </main>
   );
 }
-
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  marginBottom: "6px",
-  fontWeight: 700,
-};
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "12px 14px",
-  borderRadius: "12px",
-  border: "1px solid #D0D5DD",
-};
-
-const primaryButtonStyle: React.CSSProperties = {
-  background: "#0B5CAD",
-  color: "white",
-  border: "none",
-  borderRadius: "999px",
-  padding: "12px 18px",
-  fontWeight: 700,
-  cursor: "pointer",
-};
 
 const darkButtonStyle: React.CSSProperties = {
   background: "#111827",
