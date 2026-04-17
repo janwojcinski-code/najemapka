@@ -100,6 +100,7 @@ export default function SetNewPasswordPage() {
             >
               Nowe hasło
             </label>
+
             <input
               id="password"
               type="password"
@@ -124,7 +125,7 @@ export default function SetNewPasswordPage() {
               fontWeight: 800,
               fontSize: "16px",
               cursor: "pointer",
-              boxShadow: "0 12px 24px rgba(29, 78, 216, 0.20)",
+              opacity: status === "loading" ? 0.7 : 1,
             }}
           >
             {status === "loading" ? "Zapisywanie..." : "Zapisz nowe hasło"}
