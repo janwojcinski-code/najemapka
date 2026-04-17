@@ -16,7 +16,7 @@ async function addInvoice(formData: FormData) {
   const note = String(formData.get("note") || "");
 
   if (!apartmentId || !utilityType || Number.isNaN(amount) || !month || !year) {
-    redirect("/admin/faktury?error=Uzupełnij wszystkie pola");
+    redirect("/admin/faktury?error=Uzupełnij wszystkie wymagane pola");
   }
 
   const dueDate = new Date(year, month - 1, 10).toISOString().slice(0, 10);
@@ -131,7 +131,7 @@ export default async function AdminInvoicesPage({
           marginBottom: "24px",
         }}
       >
-        {error && (
+        {error ? (
           <div
             style={{
               marginBottom: "16px",
@@ -144,17 +144,9 @@ export default async function AdminInvoicesPage({
           >
             {error}
           </div>
-        )}
+        ) : null}
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr",
-            gap: "16px",
-            alignItems: "end",
-            marginBottom: "16px",
-          }}
-        >
+        <div style={{ display: "grid", gap: "16px", maxWidth: "680px" }}>
           <div>
             <label htmlFor="apartment_id" style={labelStyle}>
               Mieszkanie
@@ -173,11 +165,11 @@ export default async function AdminInvoicesPage({
 
           <div>
             <label htmlFor="utility_type" style={labelStyle}>
-              Typ
+              Typ faktury
             </label>
             <select id="utility_type" name="utility_type" defaultValue="" style={inputStyle}>
               <option value="" disabled>
-                Wybierz
+                Wybierz typ
               </option>
               <option value="electricity">Prąd</option>
               <option value="gas">Gaz</option>
@@ -189,48 +181,65 @@ export default async function AdminInvoicesPage({
             <label htmlFor="amount" style={labelStyle}>
               Kwota
             </label>
-            <input id="amount" name="amount" type="number" step="0.01" style={inputStyle} />
+            <input
+              id="amount"
+              name="amount"
+              type="number"
+              step="0.01"
+              placeholder="np. 185.40"
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+            <div>
+              <label htmlFor="month" style={labelStyle}>
+                Miesiąc
+              </label>
+              <input
+                id="month"
+                name="month"
+                type="number"
+                min="1"
+                max="12"
+                defaultValue={now.getMonth() + 1}
+                style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="year" style={labelStyle}>
+                Rok
+              </label>
+              <input
+                id="year"
+                name="year"
+                type="number"
+                defaultValue={now.getFullYear()}
+                style={inputStyle}
+              />
+            </div>
           </div>
 
           <div>
-            <label htmlFor="month" style={labelStyle}>
-              Miesiąc
+            <label htmlFor="note" style={labelStyle}>
+              Notatka
             </label>
             <input
-              id="month"
-              name="month"
-              type="number"
-              min="1"
-              max="12"
-              defaultValue={now.getMonth() + 1}
+              id="note"
+              name="note"
+              type="text"
+              placeholder="np. Faktura Tauron marzec"
               style={inputStyle}
             />
           </div>
 
           <div>
-            <label htmlFor="year" style={labelStyle}>
-              Rok
-            </label>
-            <input
-              id="year"
-              name="year"
-              type="number"
-              defaultValue={now.getFullYear()}
-              style={inputStyle}
-            />
+            <button type="submit" style={primaryButtonStyle}>
+              Dodaj fakturę
+            </button>
           </div>
         </div>
-
-        <div style={{ marginBottom: "16px" }}>
-          <label htmlFor="note" style={labelStyle}>
-            Notatka
-          </label>
-          <input id="note" name="note" type="text" style={inputStyle} />
-        </div>
-
-        <button type="submit" style={primaryButtonStyle}>
-          Dodaj fakturę
-        </button>
       </form>
 
       <section
